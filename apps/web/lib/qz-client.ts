@@ -74,9 +74,15 @@ export async function listPrinters(): Promise<string[]> {
   return Array.isArray(found) ? found : [found];
 }
 
-/** Manda ZPL crudo a una impresora local vía QZ Tray (bypassa el driver Windows). */
+/**
+ * Manda ZPL crudo a una impresora local vía QZ Tray.
+ * forceRaw: true es necesario para saltar el driver de Windows y escribir
+ * los bytes directo a la impresora — sin esto, el driver ZDesigner
+ * reinterpreta cada ^XA/^XZ como una "página" del trabajo y mete su propio
+ * avance/retroceso (backfeed) entre etiquetas.
+ */
 export async function printRawZpl(printerName: string, zpl: string): Promise<void> {
   await connectQz();
-  const config = qz.configs.create(printerName);
+  const config = qz.configs.create(printerName, { forceRaw: true });
   await qz.print(config, [{ type: 'raw', format: 'command', flavor: 'plain', data: zpl }]);
 }
