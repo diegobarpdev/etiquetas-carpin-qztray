@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
   const apiPort = env.API_PORT || '3010';
   const webPort = parseInt(env.WEB_PORT || '3000', 10);
   const apiTarget = env.API_URL || `http://127.0.0.1:${apiPort}`;
+  const internalApiKey = env.INTERNAL_API_KEY || '';
 
   return {
     plugins: [react()],
@@ -36,6 +37,8 @@ export default defineConfig(({ mode }) => {
           xfwd: true,
           timeout: 1_200_000,
           proxyTimeout: 1_200_000,
+          // Solo este proxy conoce la clave — nunca llega al navegador.
+          headers: { 'X-Internal-Key': internalApiKey },
         },
         '/health': {
           target: apiTarget,
@@ -57,6 +60,7 @@ export default defineConfig(({ mode }) => {
           xfwd: true,
           timeout: 1_200_000,
           proxyTimeout: 1_200_000,
+          headers: { 'X-Internal-Key': internalApiKey },
         },
         '/health': {
           target: apiTarget,

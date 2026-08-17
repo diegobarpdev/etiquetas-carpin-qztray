@@ -27,6 +27,15 @@ if (!process.env.PRINT_ADMIN_PIN || !process.env.PRINT_ADMIN_PIN.trim()) {
   process.exit(1);
 }
 
+const INTERNAL_API_KEY = String(process.env.INTERNAL_API_KEY || '').trim();
+if (!INTERNAL_API_KEY) {
+  console.error(
+    '[FATAL] Falta INTERNAL_API_KEY en .env — no hay default por seguridad. ' +
+      'La API no acepta pedidos directos sin pasar por el proxy del front.',
+  );
+  process.exit(1);
+}
+
 process.env.HOST = process.env.HOST || '0.0.0.0';
 
 const HOST = process.env.HOST || '0.0.0.0';
@@ -41,12 +50,23 @@ initPrintersConfig();
 async function main() {
   const app = express();
 
+  // Orígenes conocidos del front (nunca reflejar cualquier Origin: eso
+  // permitía a cualquier página web leer respuestas de esta API con
+  // credenciales incluidas).
+  const allowedOrigins = new Set(
+    [
+      process.env.PUBLIC_URL,
+      `http://localhost:${WEB_PORT}`,
+      `http://127.0.0.1:${WEB_PORT}`,
+    ].filter((v): v is string => Boolean(v)),
+  );
+
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin) {
+    if (origin && allowedOrigins.has(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Internal-Key');
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
     }
     if (req.method === 'OPTIONS') {
@@ -79,6 +99,15 @@ async function main() {
     });
   });
 
+  // Solo el proxy del front (apps/web/server.ts) conoce esta clave — un
+  // pedido directo al puerto de la API sin pasar por ahí queda afuera.
+  app.use('/api', (req, res, next) => {
+    if (req.get('X-Internal-Key') !== INTERNAL_API_KEY) {
+      res.status(401).json({ error: 'No autorizado' });
+      return;
+    }
+    next();
+  });
   app.use('/api', apiRouter);
 
   const server = app.listen(API_PORT, HOST, () => {

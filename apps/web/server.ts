@@ -21,6 +21,15 @@ const WEB_PORT = parseInt(process.env.WEB_PORT || '3000', 10);
 const API_PORT = parseInt(process.env.API_PORT || '3010', 10);
 const API_TARGET = process.env.API_URL || `http://127.0.0.1:${API_PORT}`;
 
+const INTERNAL_API_KEY = String(process.env.INTERNAL_API_KEY || '').trim();
+if (!INTERNAL_API_KEY) {
+  console.error(
+    '[web] Falta INTERNAL_API_KEY en .env — no hay default por seguridad. ' +
+      'La API rechaza pedidos sin esta clave, y este proxy es el único que la conoce.',
+  );
+  process.exit(1);
+}
+
 const distDir = join(__dirname, 'dist');
 if (!existsSync(join(distDir, 'index.html'))) {
   console.error(
@@ -44,6 +53,14 @@ app.use(
       pathname.startsWith('/health/') ||
       pathname === '/api' ||
       pathname.startsWith('/api/'),
+    on: {
+      proxyReq: (proxyReq) => {
+        // Este proxy es el único que conoce la clave — nunca llega al
+        // navegador. Un pedido directo al puerto de la API sin pasar por
+        // acá no la tiene y queda afuera.
+        proxyReq.setHeader('X-Internal-Key', INTERNAL_API_KEY);
+      },
+    },
   }),
 );
 
