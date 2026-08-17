@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { LABEL_STOCK_SIZES, LabelStockSizeCode } from '../config/constants';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface ConfiguredPrinter {
   windowsName: string;
@@ -39,7 +42,7 @@ export interface AvailablePrinter {
 function resolveDataDir(): string {
   const fromEnv = String(process.env.PRINTERS_CONFIG_DIR || '').trim();
   if (fromEnv) return fromEnv;
-  return join(process.cwd(), 'data');
+  return join(__dirname, '..', 'data');
 }
 
 const DATA_DIR = resolveDataDir();

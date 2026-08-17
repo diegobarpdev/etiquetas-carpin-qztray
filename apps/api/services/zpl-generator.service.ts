@@ -351,13 +351,25 @@ export async function generateLabelsZpl(
   );
 
   const printMode = forced?.printMode ?? options.printMode ?? 'tear';
-  const thermalMethod = options.thermalMethod ?? forced?.thermalMethod ?? 'direct';
+  // Solo papel/tela deja elegir método (transferencia/directa) — para el
+  // resto el método viene fijo del perfil, no hay que confiar en lo que
+  // mande el cliente (puede traer un valor viejo de otra estación).
+  const isPapelStock =
+    options.stockSizeCode === 'conforme-papel' ||
+    options.stockSizeCode === 'conforme-papel-colchones' ||
+    roleFromPrinterName(options.printerName) === 'PAPEL';
+  const thermalMethod = isPapelStock
+    ? options.thermalMethod ?? forced?.thermalMethod ?? 'direct'
+    : forced?.thermalMethod ?? 'direct';
   const mediaType = forced?.mediaType ?? options.mediaType ?? 'gap';
   const printDarknessResolved =
     options.printDarkness != null
       ? Number(options.printDarkness)
       : forced?.printDarkness ?? undefined;
-  const printSpeedIps = Number(options.printSpeedIps) || 6;
+  const defaultSpeedIps = Number.isFinite(Number(process.env.PRINT_SPEED_IPS))
+    ? Number(process.env.PRINT_SPEED_IPS)
+    : 6;
+  const printSpeedIps = Number(options.printSpeedIps) || defaultSpeedIps;
 
   const pdf = await generateLabelsPdf(labels, {
     preview: options.preview,

@@ -118,7 +118,7 @@ function Ensure-Firewall {
 function Start-AppWithPm2 {
   Write-Step 'PM2 start (etiquetas-api + etiquetas-web)...'
   New-Item -ItemType Directory -Force -Path (Join-Path $Root 'logs') | Out-Null
-  New-Item -ItemType Directory -Force -Path (Join-Path $Root 'data') | Out-Null
+  New-Item -ItemType Directory -Force -Path (Join-Path $Root 'apps/api/data') | Out-Null
   Push-Location $Root
   try {
     $prev = $ErrorActionPreference

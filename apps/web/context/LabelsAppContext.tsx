@@ -8,7 +8,6 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { suggestStockSizeForTemplate } from '../../server/config/constants';
 import {
   apiAvailablePrinters,
   apiDownloadPdfWithFilename,
@@ -40,11 +39,13 @@ import {
   encodePrinterValue,
   getHardwareProfile,
   getPrinterForStock,
+  isPapelTarget,
   loadLocalVisiblePrinters,
   loadSettings,
   resolveHardwareSettings,
   saveSettings,
   setPrinterLocallyVisible,
+  suggestStockSizeForTemplate,
 } from '../lib/printer-settings';
 import { toast } from '../lib/toast';
 import { connectQz, printRawZpl, QzNotAvailableError } from '../lib/qz-client';
@@ -1133,12 +1134,16 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
     if (decoded) selectedPrinterByStock[stock] = decoded;
 
     const hardware = getHardwareProfile({ stockSize: stock, windowsName: decoded?.windowsName });
+    // El selector "Método de Impresión" solo existe para papel/tela — para
+    // adhesivo el método es fijo (directa), no hay que dejar que el estado
+    // de UI (que arranca en 'transfer') lo pise.
+    const isPapel = isPapelTarget({ stockSize: stock, windowsName: decoded?.windowsName });
     const settings: PrinterSettings = {
       mode: 'direct',
       copies: Math.max(1, Number(ctx.printerCopies) || 1),
       stockSize: stock,
       printMode: hardware.printMode,
-      thermalMethod: ctx.printerThermalMethod || hardware.thermalMethod,
+      thermalMethod: isPapel ? ctx.printerThermalMethod || hardware.thermalMethod : hardware.thermalMethod,
       mediaType: hardware.mediaType,
       selectedPrinterByStock,
     };

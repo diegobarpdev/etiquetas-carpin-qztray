@@ -3,11 +3,11 @@ import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const rootDir = path.dirname(fileURLToPath(import.meta.url));
-const webRoot = path.resolve(rootDir, 'web');
+const webRoot = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(webRoot, '..', '..');
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, rootDir, '');
+  const env = loadEnv(mode, repoRoot, '');
   const apiPort = env.API_PORT || '3010';
   const webPort = parseInt(env.WEB_PORT || '3000', 10);
   const apiTarget = env.API_URL || `http://127.0.0.1:${apiPort}`;
@@ -15,14 +15,14 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     root: webRoot,
-    publicDir: path.resolve(rootDir, 'public'),
+    publicDir: path.resolve(webRoot, 'public'),
     resolve: {
       alias: {
         '@': webRoot,
       },
     },
     build: {
-      outDir: path.resolve(rootDir, 'dist'),
+      outDir: path.resolve(webRoot, 'dist'),
       emptyOutDir: true,
     },
     server: {

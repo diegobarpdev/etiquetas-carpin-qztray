@@ -2,7 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["server/*"]
+      "@/*": ["./*"]
     },
     "types": ["node"],
     "verbatimModuleSyntax": false,
@@ -15,6 +15,6 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["server/**/*", "vite.config.ts"],
-  "exclude": ["dist", "node_modules", "web", "astro-etiquetas", "src"]
+  "include": ["./**/*"],
+  "exclude": ["dist", "node_modules"]
 }

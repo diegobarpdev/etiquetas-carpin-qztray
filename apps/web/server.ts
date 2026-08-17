@@ -10,7 +10,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import { config as loadEnv } from 'dotenv';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(__dirname, '..');
+const repoRoot = join(__dirname, '..', '..');
 const envPath = join(repoRoot, '.env');
 if (existsSync(envPath)) {
   loadEnv({ path: envPath, override: true });
@@ -21,7 +21,7 @@ const WEB_PORT = parseInt(process.env.WEB_PORT || '3000', 10);
 const API_PORT = parseInt(process.env.API_PORT || '3010', 10);
 const API_TARGET = process.env.API_URL || `http://127.0.0.1:${API_PORT}`;
 
-const distDir = join(repoRoot, 'dist');
+const distDir = join(__dirname, 'dist');
 if (!existsSync(join(distDir, 'index.html'))) {
   console.error(
     `[web] No hay build en ${distDir}. Ejecuta "npm run build" antes de start:web.`,

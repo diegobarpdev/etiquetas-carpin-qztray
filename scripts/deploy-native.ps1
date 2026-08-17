@@ -54,9 +54,8 @@ if (-not (Test-Path (Join-Path $root ".env"))) {
 }
 
 npm ci
-npx prisma generate
-npx prisma migrate deploy
-npm run db:seed
+npm run prisma:generate
+npm run prisma:migrate
 npm run build
 
 if (-not $SkipFirewall) {

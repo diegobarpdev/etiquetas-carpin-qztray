@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'etiquetas-api',
       script: 'node_modules/tsx/dist/cli.mjs',
-      args: 'server/index.ts',
+      args: 'apps/api/index.ts',
       cwd: __dirname,
       instances: 1,
       exec_mode: 'fork',
@@ -23,7 +23,7 @@ module.exports = {
     {
       name: 'etiquetas-web',
       script: 'node_modules/tsx/dist/cli.mjs',
-      args: 'server/web.ts',
+      args: 'apps/web/server.ts',
       cwd: __dirname,
       instances: 1,
       exec_mode: 'fork',

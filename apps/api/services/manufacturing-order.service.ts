@@ -1,10 +1,11 @@
 import { existsSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { Decimal } from '../types';
 import { isOdooEnabled, odooQuery } from '../lib/odoo';
 import { OrderWithLines, ProductWithBom } from '../types';
 
-/** Catálogo de UI: nombres amigables (HTML/CSS viven en server/templates/labels). */
+/** Catálogo de UI: nombres amigables (HTML/CSS viven en templates/labels). */
 const TEMPLATE_CATALOG: ReadonlyArray<{ code: string; name: string }> = [
   { code: 'carpinteria', name: 'ADHESIVO - CARPENTER' },
   { code: 'producto-conforme', name: 'ADHESIVO - PRODUCTO CONFORME' },
@@ -591,7 +592,7 @@ export async function getOrderById(id: number): Promise<OrderWithLines | null> {
  * aparezcan aunque aún no estén sembradas en label_templates.
  */
 export async function listTemplates() {
-  const labelsDir = join(process.cwd(), 'server', 'templates', 'labels');
+  const labelsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'labels');
 
   const fromDisk = TEMPLATE_CATALOG.filter((t) =>
     existsSync(join(labelsDir, t.code, 'template.hbs')),

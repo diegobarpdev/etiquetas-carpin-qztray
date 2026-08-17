@@ -6,9 +6,9 @@ dist/
 coverage/
 
 logs/
-data/printers-config.json
-data/qz-cert.pem
-data/qz-key.pem
+apps/api/data/printers-config.json
+apps/api/data/qz-cert.pem
+apps/api/data/qz-key.pem
 cloudflared.exe
 _legacy_*/
 

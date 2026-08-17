@@ -13,7 +13,7 @@ import { closeOdooPool, isOdooEnabled, odooHealth } from './lib/odoo';
 import { getLanIpv4Addresses, getPublicUrls } from './lib/network';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(__dirname, '..');
+const repoRoot = join(__dirname, '..', '..');
 const envPath = join(repoRoot, '.env');
 if (existsSync(envPath)) {
   loadEnv({ path: envPath, override: true });

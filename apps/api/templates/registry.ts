@@ -1,6 +1,7 @@
 import Handlebars from 'handlebars';
 import { readFileSync, existsSync, statSync, readdirSync } from 'fs';
-import { join, extname } from 'path';
+import { dirname, join, extname } from 'path';
+import { fileURLToPath } from 'url';
 import QRCode from 'qrcode';
 import { FACTORY_INFO, PRODUCTO_TERMINADO_FACTORY_FOOTER } from '../config/constants';
 import { LabelData } from '../types';
@@ -16,7 +17,9 @@ import {
   carpenterTelaSecondaryBody,
 } from '../utils/barcode';
 
-const TEMPLATES_DIR = join(process.cwd(), 'server', 'templates', 'labels');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const API_ROOT = join(__dirname, '..');
+const TEMPLATES_DIR = join(__dirname, 'labels');
 
 export interface RenderedLabel {
   html: string;
@@ -77,7 +80,7 @@ function fileToDataUri(filePath: string): string {
 }
 
 function getLogoFromCandidates(candidates: string[]): string | null {
-  const assetsDir = join(process.cwd(), 'assets');
+  const assetsDir = join(API_ROOT, 'assets');
 
   for (const name of candidates) {
     const logoPath = join(assetsDir, name);
@@ -93,7 +96,7 @@ function getLogoDataUri(): string {
   const fromCandidates = getLogoFromCandidates(LOGO_CANDIDATES);
   if (fromCandidates) return fromCandidates;
 
-  const assetsDir = join(process.cwd(), 'assets');
+  const assetsDir = join(API_ROOT, 'assets');
   if (existsSync(assetsDir)) {
     const imageFile = readdirSync(assetsDir).find((file) =>
       LOGO_EXTENSIONS.has(extname(file).toLowerCase()),

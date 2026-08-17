@@ -3,13 +3,11 @@ FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
 RUN npm ci
 
-COPY vite.config.ts tsconfig.json tailwind.config.js postcss.config.js components.json ./
-COPY web ./web
-COPY server ./server
-COPY public ./public
-COPY assets ./assets
+COPY apps ./apps
 
 RUN npm run build
 
@@ -32,14 +30,15 @@ ENV API_PORT=3010
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
 RUN npm ci --omit=dev && npm install tsx
 
-COPY --from=builder /app/dist ./dist
-COPY server ./server
-COPY assets ./assets
-COPY data ./data
+COPY --from=builder /app/apps/web/dist ./apps/web/dist
+COPY apps/api ./apps/api
+COPY apps/web/server.ts ./apps/web/server.ts
 COPY ecosystem.config.cjs ./
 
 EXPOSE 3000 3010
 
-CMD ["npx", "concurrently", "-k", "-n", "api,web", "-c", "green,cyan", "tsx server/index.ts", "tsx server/web.ts"]
+CMD ["npx", "concurrently", "-k", "-n", "api,web", "-c", "green,cyan", "tsx apps/api/index.ts", "tsx apps/web/server.ts"]

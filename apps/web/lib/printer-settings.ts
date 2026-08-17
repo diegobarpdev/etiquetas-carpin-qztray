@@ -130,10 +130,15 @@ export function resolveHardwareSettings(settings: PrinterSettings): PrinterSetti
     stockSize: settings?.stockSize,
     windowsName: selected?.windowsName,
   });
-  const chosenMethod =
-    settings?.thermalMethodByStock?.[settings?.stockSize] ||
-    settings?.thermalMethod ||
-    forced.thermalMethod;
+  // Solo papel/tela deja elegir método (selector en el sidebar). Para
+  // adhesivo el método viene fijo del perfil — no dejar que un valor de UI
+  // viejo (arranca en 'transfer') lo pise.
+  const isPapel = isPapelTarget({ stockSize: settings?.stockSize, windowsName: selected?.windowsName });
+  const chosenMethod = isPapel
+    ? settings?.thermalMethodByStock?.[settings?.stockSize] ||
+      settings?.thermalMethod ||
+      forced.thermalMethod
+    : forced.thermalMethod;
   return {
     ...settings,
     printMode: forced.printMode,
@@ -148,6 +153,26 @@ export function describeHardwareProfile(profile?: HardwareProfile | null): strin
   const thermal = profile.thermalMethod === 'direct' ? 'Térmica directa' : 'Transferencia';
   const media = profile.mediaType === 'continuous' ? 'Continua' : 'Gap/notch';
   return `${mode} · ${thermal} · ${media}`;
+}
+
+/** Sugiere el stock/papel según la plantilla (copia local, ver server/config/constants.ts). */
+export function suggestStockSizeForTemplate(templateCode: string): string {
+  if (templateCode === 'producto-conforme') {
+    return 'producto-conforme';
+  }
+  if (templateCode === 'producto-conforme-papel') {
+    return 'conforme-papel';
+  }
+  if (templateCode === 'producto-conforme-papel-colchones') {
+    return 'conforme-papel-colchones';
+  }
+  if (templateCode === 'carpinteria') {
+    return 'carpinteria';
+  }
+  if (templateCode === 'carpenter-tela') {
+    return 'conforme-papel';
+  }
+  return 'producto-terminado';
 }
 
 export function buildPrintChecklist(stockSize: string): string[] {
