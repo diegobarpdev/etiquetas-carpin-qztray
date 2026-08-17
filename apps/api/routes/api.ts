@@ -25,6 +25,7 @@ import {
 } from '../services/manufacturing-order.service';
 import { listAvailableTemplates } from '../templates/registry';
 import type { LabelData } from '../types';
+import { createRateLimiter } from '../lib/rate-limit';
 import printersRouter from './printers';
 import qzRouter from './qz';
 import inspectorsRouter from './inspectors';
@@ -33,6 +34,18 @@ const router = Router();
 router.use(printersRouter);
 router.use(qzRouter);
 router.use(inspectorsRouter);
+
+/**
+ * Cada request acá dispara un render de PDF con Puppeteer (y para los de
+ * impresión, además rasteriza con mupdf) — caro en CPU/memoria. Sin esto,
+ * un loop descontrolado (o un DoS a propósito) tumba el único server que
+ * también sirve el resto de la app.
+ */
+const renderRateLimit = createRateLimiter({
+  windowMs: 60_000,
+  max: 20,
+  message: 'Demasiadas impresiones/PDFs seguidos. Esperá un momento y volvé a intentar.',
+});
 
 /**
  * Genera el ZPL (bitmap ^GFA) de las etiquetas para que el browser lo mande
@@ -475,7 +488,7 @@ router.get('/orders/:id/labels/html', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/orders/:id/labels/pdf', async (req: Request, res: Response) => {
+router.get('/orders/:id/labels/pdf', renderRateLimit, async (req: Request, res: Response) => {
   try {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
@@ -600,7 +613,7 @@ router.get('/labels/batch/html', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/labels/batch/pdf', async (req: Request, res: Response) => {
+router.get('/labels/batch/pdf', renderRateLimit, async (req: Request, res: Response) => {
   try {
     const jobs = parseBatchJobs(req.query.jobs);
     const templateOverride = resolveTemplateOverride(req.query.template);
@@ -632,7 +645,7 @@ router.get('/labels/batch/pdf', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/labels/print-batch', async (req: Request, res: Response) => {
+router.post('/labels/print-batch', renderRateLimit, async (req: Request, res: Response) => {
   try {
     const jobs = parseBatchJobs(req.body?.jobs ?? req.query.jobs);
     const templateOverride = resolveTemplateOverride(
@@ -746,7 +759,7 @@ router.post('/labels/print-batch', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/orders/:id/labels/print-direct', async (req: Request, res: Response) => {
+router.post('/orders/:id/labels/print-direct', renderRateLimit, async (req: Request, res: Response) => {
   try {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
@@ -967,7 +980,7 @@ router.get('/manual/labels/html', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/manual/labels/pdf', async (req: Request, res: Response) => {
+router.get('/manual/labels/pdf', renderRateLimit, async (req: Request, res: Response) => {
   try {
     const order = await resolveManualOrder(req.query as Record<string, unknown>);
     const templateOverride = resolveTemplateOverride(req.query.template);
@@ -1001,7 +1014,7 @@ router.get('/manual/labels/pdf', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/manual/labels/print-direct', async (req: Request, res: Response) => {
+router.post('/manual/labels/print-direct', renderRateLimit, async (req: Request, res: Response) => {
   try {
     const merged = { ...(req.query as Record<string, unknown>), ...(req.body ?? {}) };
     const order = await resolveManualOrder(merged);
