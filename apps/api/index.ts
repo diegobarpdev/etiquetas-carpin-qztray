@@ -19,6 +19,14 @@ if (existsSync(envPath)) {
   loadEnv({ path: envPath, override: true });
 }
 
+if (!process.env.PRINT_ADMIN_PIN || !process.env.PRINT_ADMIN_PIN.trim()) {
+  console.error(
+    '[FATAL] Falta PRINT_ADMIN_PIN en .env — no hay default por seguridad. ' +
+      'Configurá un PIN antes de arrancar (bloquea Configuración → Impresoras).',
+  );
+  process.exit(1);
+}
+
 process.env.HOST = process.env.HOST || '0.0.0.0';
 
 const HOST = process.env.HOST || '0.0.0.0';

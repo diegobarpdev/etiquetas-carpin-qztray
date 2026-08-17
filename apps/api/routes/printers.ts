@@ -4,6 +4,7 @@ import {
   clearAdminSession,
   createAdminSession,
   getAdminSessionStatus,
+  getUnlockLockStatus,
   requirePrintAdmin,
   verifyAdminPin,
 } from '../services/print-admin-auth.service';
@@ -25,6 +26,22 @@ function slugId(input: string): string {
       .replace(/^-|-$/g, '')
       .slice(0, 40) || `station-${Date.now()}`
   );
+}
+
+/** IP del navegador (soporta proxy / ::ffff: / X-Forwarded-For) — usada para el rate-limit de /unlock. */
+function getRequestClientIp(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  if (Array.isArray(forwarded) && forwarded[0]) {
+    return forwarded[0].trim();
+  }
+  const realIp = req.headers['x-real-ip'];
+  if (typeof realIp === 'string' && realIp.trim()) {
+    return realIp.trim();
+  }
+  return String(req.socket.remoteAddress || req.ip || '').trim();
 }
 
 /**
@@ -62,7 +79,15 @@ function buildAvailablePrinters(stockSize?: string): { printers: AvailablePrinte
 }
 
 router.post('/admin/printers/unlock', (req: Request, res: Response) => {
-  if (!verifyAdminPin(req.body?.pin)) {
+  const ip = getRequestClientIp(req);
+  const lock = getUnlockLockStatus(ip);
+  if (lock.locked) {
+    res.status(429).json({
+      error: `Demasiados intentos. Probá de nuevo en ${Math.ceil(lock.retryAfterMs / 1000)}s.`,
+    });
+    return;
+  }
+  if (!verifyAdminPin(req.body?.pin, ip)) {
     res.status(401).json({ error: 'Clave incorrecta' });
     return;
   }

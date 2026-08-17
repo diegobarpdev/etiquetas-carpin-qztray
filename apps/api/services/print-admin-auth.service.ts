@@ -12,8 +12,41 @@ interface SessionEntry {
 
 const sessions = new Map<string, SessionEntry>();
 
-function getAdminPin(): string {
-  return (process.env.PRINT_ADMIN_PIN || 'col1968').trim();
+/** Sin default: si no está seteado en .env, no hay PIN válido (falla cerrado). */
+function getAdminPin(): string | null {
+  const pin = (process.env.PRINT_ADMIN_PIN || '').trim();
+  return pin || null;
+}
+
+/**
+ * Rate-limit de /unlock por IP: bloqueo progresivo tras varios intentos
+ * fallidos. En memoria (alcanza para un solo proceso; se resetea al
+ * reiniciar, que es aceptable para este caso de uso).
+ */
+interface AttemptEntry {
+  failures: number;
+  lockedUntil: number;
+}
+const attempts = new Map<string, AttemptEntry>();
+const LOCKOUT_STEPS = [
+  { after: 5, forMs: 30_000 },
+  { after: 8, forMs: 2 * 60_000 },
+  { after: 12, forMs: 15 * 60_000 },
+];
+
+function registerFailedAttempt(ip: string): void {
+  const entry = attempts.get(ip) || { failures: 0, lockedUntil: 0 };
+  entry.failures += 1;
+  const step = [...LOCKOUT_STEPS].reverse().find((s) => entry.failures >= s.after);
+  if (step) entry.lockedUntil = Date.now() + step.forMs;
+  attempts.set(ip, entry);
+}
+
+export function getUnlockLockStatus(ip: string): { locked: boolean; retryAfterMs: number } {
+  const entry = attempts.get(String(ip || '').trim());
+  if (!entry) return { locked: false, retryAfterMs: 0 };
+  const remaining = entry.lockedUntil - Date.now();
+  return remaining > 0 ? { locked: true, retryAfterMs: remaining } : { locked: false, retryAfterMs: 0 };
 }
 
 function hashToken(token: string): string {
@@ -40,17 +73,27 @@ function pruneSessions() {
   }
 }
 
-export function verifyAdminPin(pin: unknown): boolean {
-  if (typeof pin !== 'string') return false;
+export function verifyAdminPin(pin: unknown, clientIp: string): boolean {
   const expected = getAdminPin();
-  const a = Buffer.from(pin.trim());
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  try {
-    return timingSafeEqual(a, b);
-  } catch {
-    return false;
+  if (!expected) return false;
+  const ok = (() => {
+    if (typeof pin !== 'string') return false;
+    const a = Buffer.from(pin.trim());
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return false;
+    try {
+      return timingSafeEqual(a, b);
+    } catch {
+      return false;
+    }
+  })();
+  const ip = String(clientIp || '').trim();
+  if (ok) {
+    attempts.delete(ip);
+  } else if (ip) {
+    registerFailedAttempt(ip);
   }
+  return ok;
 }
 
 export function createAdminSession(res: Response): void {
