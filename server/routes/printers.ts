@@ -9,10 +9,7 @@ import {
 } from '../services/print-admin-auth.service';
 import {
   AvailablePrinter,
-  ConfiguredAgent,
-  findStationsForClientIp,
-  normalizeClientIp,
-  printerKey,
+  ConfiguredStation,
   PrintersConfig,
   readConfig,
   writeConfig,
@@ -26,90 +23,32 @@ function slugId(input: string): string {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
-      .slice(0, 40) || `agent-${Date.now()}`
+      .slice(0, 40) || `station-${Date.now()}`
   );
 }
 
-/** IP del navegador operario (soporta proxy / ::ffff: / X-Forwarded-For). */
-export function getRequestClientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    // Primer hop = cliente real (browser → front :3001 → API :3010)
-    return normalizeClientIp(forwarded.split(',')[0]);
-  }
-  if (Array.isArray(forwarded) && forwarded[0]) {
-    return normalizeClientIp(forwarded[0]);
-  }
-  const realIp = req.headers['x-real-ip'];
-  if (typeof realIp === 'string' && realIp.trim()) {
-    return normalizeClientIp(realIp);
-  }
-  return normalizeClientIp(req.socket.remoteAddress || req.ip || '');
-}
-
-async function buildAvailablePrinters(
-  stockSize?: string,
-  clientIp?: string,
-): Promise<{
-  printers: AvailablePrinter[];
-  stationCode: string | null;
-  clientIp: string;
-  stationRequired: boolean;
-}> {
+/**
+ * Catálogo completo (todas las estaciones/impresoras). Qué impresora usa
+ * cada PC lo decide el operario en su propio navegador (selección local,
+ * ver web/lib/printer-settings.ts) — el server ya no filtra por IP/visible.
+ */
+function buildAvailablePrinters(stockSize?: string): { printers: AvailablePrinter[] } {
   const config = readConfig();
   const stock =
-    stockSize && stockSize in LABEL_STOCK_SIZES
-      ? (stockSize as LabelStockSizeCode)
-      : undefined;
-
-  const ip = normalizeClientIp(clientIp);
-  const stations = config.stations || [];
-  const stationRequired = stations.length > 0;
-  const matchedStations = stationRequired
-    ? findStationsForClientIp(stations, ip)
-    : [];
-  const allowedKeys =
-    stationRequired && matchedStations.length > 0
-      ? new Set(
-          matchedStations.flatMap((st) =>
-            st.printers.map((p) => printerKey(p.agentId, p.windowsName)),
-          ),
-        )
-      : null;
-  const stationCode =
-    matchedStations.length > 0
-      ? matchedStations.map((st) => st.code).join(', ')
-      : null;
+    stockSize && stockSize in LABEL_STOCK_SIZES ? (stockSize as LabelStockSizeCode) : undefined;
 
   const results: AvailablePrinter[] = [];
-
-  // Sin estaciones configuradas → comportamiento anterior (todas las visibles).
-  // Con estaciones y IP desconocida → lista vacía.
-  if (stationRequired && matchedStations.length === 0) {
-    return {
-      printers: [],
-      stationCode: null,
-      clientIp: ip,
-      stationRequired: true,
-    };
-  }
-
-  for (const agent of config.agents) {
-    for (const printer of agent.printers) {
-      if (!printer.visible) continue;
-      if (allowedKeys && !allowedKeys.has(printerKey(agent.id, printer.windowsName))) {
-        continue;
-      }
+  for (const station of config.stations || []) {
+    for (const printer of station.printers) {
       const matchesStock =
         !stock || printer.stocks.length === 0 || printer.stocks.includes(stock);
       results.push({
-        agentId: agent.id,
-        agentName: agent.name,
+        stationId: station.id,
+        stationName: station.name,
         windowsName: printer.windowsName,
         label: printer.label || printer.windowsName,
         stocks: printer.stocks,
         matchesStock,
-        stationCode: stationCode || undefined,
       });
     }
   }
@@ -119,12 +58,7 @@ async function buildAvailablePrinters(
     return a.label.localeCompare(b.label, 'es');
   });
 
-  return {
-    printers: results,
-    stationCode,
-    clientIp: ip,
-    stationRequired,
-  };
+  return { printers: results };
 }
 
 router.post('/admin/printers/unlock', (req: Request, res: Response) => {
@@ -148,7 +82,6 @@ router.get('/admin/printers/session', (req: Request, res: Response) => {
 router.get('/admin/printers/config', requirePrintAdmin, (_req: Request, res: Response) => {
   const config = readConfig();
   res.json({
-    agents: config.agents,
     stations: config.stations || [],
     stockSizes: Object.keys(LABEL_STOCK_SIZES),
   });
@@ -157,14 +90,11 @@ router.get('/admin/printers/config', requirePrintAdmin, (_req: Request, res: Res
 router.put('/admin/printers/config', requirePrintAdmin, (req: Request, res: Response) => {
   try {
     const body = req.body as PrintersConfig;
-    if (!body || !Array.isArray(body.agents)) {
-      res.status(400).json({ error: 'Body inválido: se espera { agents: [...], stations?: [...] }' });
+    if (!body || !Array.isArray(body.stations)) {
+      res.status(400).json({ error: 'Body inválido: se espera { stations: [...] }' });
       return;
     }
-    const saved = writeConfig({
-      agents: body.agents,
-      stations: Array.isArray(body.stations) ? body.stations : readConfig().stations,
-    });
+    const saved = writeConfig({ stations: body.stations });
     res.json(saved);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -172,11 +102,12 @@ router.put('/admin/printers/config', requirePrintAdmin, (req: Request, res: Resp
   }
 });
 
-router.post('/admin/printers/agents', requirePrintAdmin, (req: Request, res: Response) => {
+router.post('/admin/printers/stations', requirePrintAdmin, (req: Request, res: Response) => {
   try {
     const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
-    if (!name) {
-      res.status(400).json({ error: 'name es obligatorio' });
+    const code = typeof req.body?.code === 'string' ? req.body.code.trim().toUpperCase() : '';
+    if (!name && !code) {
+      res.status(400).json({ error: 'name o code es obligatorio' });
       return;
     }
 
@@ -184,19 +115,20 @@ router.post('/admin/printers/agents', requirePrintAdmin, (req: Request, res: Res
     let id =
       typeof req.body?.id === 'string' && req.body.id.trim()
         ? req.body.id.trim()
-        : slugId(name);
-    if (config.agents.some((a) => a.id === id)) {
+        : slugId(code || name);
+    if (config.stations.some((s) => s.id === id)) {
       id = `${id}-${Date.now().toString(36)}`;
     }
 
-    const agent: ConfiguredAgent = {
+    const station: ConfiguredStation = {
       id,
-      name,
+      code: code || slugId(name).toUpperCase(),
+      name: name || code,
       printers: [],
     };
-    config.agents.push(agent);
+    config.stations.push(station);
     const saved = writeConfig(config);
-    res.status(201).json(saved.agents.find((a) => a.id === id));
+    res.status(201).json(saved.stations.find((s) => s.id === id));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     res.status(400).json({ error: message });
@@ -204,40 +136,28 @@ router.post('/admin/printers/agents', requirePrintAdmin, (req: Request, res: Res
 });
 
 router.delete(
-  '/admin/printers/agents/:agentId',
+  '/admin/printers/stations/:stationId',
   requirePrintAdmin,
   (req: Request, res: Response) => {
     const config = readConfig();
-    const agentId = String(req.params.agentId);
-    const nextAgents = config.agents.filter((a) => a.id !== agentId);
-    if (nextAgents.length === config.agents.length) {
-      res.status(404).json({ error: 'Agente no encontrado' });
+    const stationId = String(req.params.stationId);
+    const nextStations = config.stations.filter((s) => s.id !== stationId);
+    if (nextStations.length === config.stations.length) {
+      res.status(404).json({ error: 'Estación no encontrada' });
       return;
     }
-    const stations = (config.stations || [])
-      .filter((st) => st.agentId !== agentId)
-      .map((st) => ({
-        ...st,
-        printers: st.printers.filter((p) => p.agentId !== agentId),
-      }));
-    const saved = writeConfig({ agents: nextAgents, stations });
+    const saved = writeConfig({ stations: nextStations });
     res.json(saved);
   },
 );
 
-/** Lista pública para la UI de impresión (solo visibles + filtro por estación/IP). */
-router.get('/printers/available', async (req: Request, res: Response) => {
+/** Catálogo completo para la UI de impresión (cada PC filtra localmente cuál usa). */
+router.get('/printers/available', (req: Request, res: Response) => {
   try {
     const stock =
       typeof req.query.stockSize === 'string' ? req.query.stockSize : undefined;
-    const clientIp = getRequestClientIp(req);
-    const result = await buildAvailablePrinters(stock, clientIp);
-    res.json({
-      printers: result.printers,
-      stationCode: result.stationCode,
-      clientIp: result.clientIp,
-      stationRequired: result.stationRequired,
-    });
+    const result = buildAvailablePrinters(stock);
+    res.json({ printers: result.printers });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     res.status(500).json({ error: message });

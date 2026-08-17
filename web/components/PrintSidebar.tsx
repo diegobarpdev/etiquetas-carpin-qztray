@@ -1,5 +1,7 @@
-import { Copy, Printer } from 'lucide-react';
+import { useState } from 'react';
+import { Copy, Printer, Settings2 } from 'lucide-react';
 import { useLabelsApp } from '../context/LabelsAppContext';
+import { LocalPrinterPicker } from './LocalPrinterPicker';
 import { templateUsesInspector } from '../lib/format';
 import { getBatchLabelTotal } from '../lib/order-selection';
 import { getPrintMediaChecklist } from '../lib/print-media-hint';
@@ -30,7 +32,7 @@ export function PrintSidebar() {
     printBatch,
     totalLabelCount,
     lastOrderData,
-    availablePrinters,
+    visiblePrinters,
     selectedPrinterValue,
     onPrinterSelectChange,
     printerCopies,
@@ -75,6 +77,8 @@ export function PrintSidebar() {
       ? `${printBatch.filter((j) => j.inspectorName).length}/${printBatch.length} órdenes con inspector`
       : selectedInspectorName;
 
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   return (
     <Sheet open={printSidebarOpen} onOpenChange={(open) => !open && closePrintSidebar()}>
       <SheetContent
@@ -91,10 +95,20 @@ export function PrintSidebar() {
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 py-4">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="inline-flex items-center gap-1.5">
-                <Printer className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Impresora
-              </Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="inline-flex items-center gap-1.5">
+                  <Printer className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  Impresora
+                </Label>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-ui-xs font-medium text-brand-600 hover:underline"
+                  onClick={() => setPickerOpen(true)}
+                >
+                  <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  Elegir mis impresoras
+                </button>
+              </div>
               <Select
                 value={selectedPrinterValue || undefined}
                 onValueChange={(value) => onPrinterSelectChange(value === '__none__' ? '' : value)}
@@ -104,8 +118,8 @@ export function PrintSidebar() {
                 </SelectTrigger>
                 <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)]">
                   <SelectItem value="__none__">Elegir impresora…</SelectItem>
-                  {availablePrinters.map((p) => {
-                    const value = `${p.agentId}::${p.windowsName}`;
+                  {visiblePrinters.map((p) => {
+                    const value = `${p.stationId}::${p.windowsName}`;
                     const label = p.label || p.windowsName;
                     return (
                       <SelectItem key={value} value={value} className="whitespace-normal">
@@ -115,10 +129,13 @@ export function PrintSidebar() {
                   })}
                 </SelectContent>
               </Select>
-              {availablePrinters.length === 0 ? (
-                <p className="text-ui-xs text-muted-foreground">No hay impresoras disponibles.</p>
+              {visiblePrinters.length === 0 ? (
+                <p className="text-ui-xs text-muted-foreground">
+                  No elegiste impresoras para esta PC. Tocá "Elegir mis impresoras".
+                </p>
               ) : null}
             </div>
+            <LocalPrinterPicker open={pickerOpen} onClose={() => setPickerOpen(false)} />
 
             {inspectorMissing ? (
               <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-ui-xs text-red-700">

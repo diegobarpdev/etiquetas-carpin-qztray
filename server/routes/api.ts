@@ -13,7 +13,7 @@ import {
 } from '../services/label-selection.service';
 import { buildLabelsHtml, generateLabelsPdf } from '../services/pdf-generator.service';
 import { generateLabelsZpl } from '../services/zpl-generator.service';
-import { getAgentById } from '../services/printers-config.service';
+import { getStationById } from '../services/printers-config.service';
 import {
   buildManualOrder,
   buildManualOrderName,
@@ -646,40 +646,40 @@ router.post('/labels/print-batch', async (req: Request, res: Response) => {
       typeof req.body?.printerName === 'string' && req.body.printerName.trim()
         ? req.body.printerName.trim()
         : undefined;
-    const agentId =
-      typeof req.body?.agentId === 'string' && req.body.agentId.trim()
-        ? req.body.agentId.trim()
+    const stationId =
+      typeof req.body?.stationId === 'string' && req.body.stationId.trim()
+        ? req.body.stationId.trim()
         : undefined;
     const printMode = req.body?.printMode === 'cutter' ? 'cutter' : 'tear';
     const thermalMethod = req.body?.thermalMethod === 'transfer' ? 'transfer' : 'direct';
     const mediaType = req.body?.mediaType === 'continuous' ? 'continuous' : 'gap';
 
-    let agentName: string | undefined;
-    if (agentId) {
-      const agent = getAgentById(agentId);
-      if (!agent) {
-        res.status(400).json({ error: `Agente no encontrado: ${agentId}` });
+    let stationName: string | undefined;
+    if (stationId) {
+      const station = getStationById(stationId);
+      if (!station) {
+        res.status(400).json({ error: `Estación no encontrada: ${stationId}` });
         return;
       }
-      const configured = agent.printers.find(
-        (p) => p.windowsName === printerName && p.visible,
+      const configured = station.printers.find(
+        (p) => p.windowsName === printerName,
       );
       if (printerName && !configured) {
         res.status(400).json({
           error:
-            'La impresora no está visible/habilitada. Revisa Configuración de impresoras.',
+            'La impresora no está en el catálogo de la estación. Revisa Configuración de impresoras.',
         });
         return;
       }
-      agentName = agent.name;
+      stationName = station.name;
     }
 
     if (!printerName) {
       res.status(400).json({ error: 'Falta printerName (impresora Windows)' });
       return;
     }
-    if (!agentId) {
-      res.status(400).json({ error: 'Falta agentId (PC / zona de impresión)' });
+    if (!stationId) {
+      res.status(400).json({ error: 'Falta stationId (estación de impresión)' });
       return;
     }
 
@@ -715,8 +715,8 @@ router.post('/labels/print-batch', async (req: Request, res: Response) => {
       stockSize: stockSizeCode,
       paperName,
       printer: printerName,
-      agentId,
-      agentName,
+      stationId,
+      stationName,
       form: stockMeta
         ? { name: paperName, widthMm: result.widthMm, heightMm: result.heightMm }
         : { name: paperName, widthMm: result.widthMm, heightMm: result.heightMm },
@@ -726,8 +726,7 @@ router.post('/labels/print-batch', async (req: Request, res: Response) => {
       const msg = error.message;
       console.error('[print-batch]', msg);
       if (
-        msg.includes('agente') ||
-        msg.includes('Agente') ||
+        msg.includes('Estación') ||
         msg.includes('imprimir') ||
         msg.includes('formulario') ||
         msg.includes('impresora') ||
@@ -772,40 +771,40 @@ router.post('/orders/:id/labels/print-direct', async (req: Request, res: Respons
       typeof req.body?.printerName === 'string' && req.body.printerName.trim()
         ? req.body.printerName.trim()
         : undefined;
-    const agentId =
-      typeof req.body?.agentId === 'string' && req.body.agentId.trim()
-        ? req.body.agentId.trim()
+    const stationId =
+      typeof req.body?.stationId === 'string' && req.body.stationId.trim()
+        ? req.body.stationId.trim()
         : undefined;
     const printMode = req.body?.printMode === 'cutter' ? 'cutter' : 'tear';
     const thermalMethod = req.body?.thermalMethod === 'transfer' ? 'transfer' : 'direct';
     const mediaType = req.body?.mediaType === 'continuous' ? 'continuous' : 'gap';
 
-    let agentName: string | undefined;
-    if (agentId) {
-      const agent = getAgentById(agentId);
-      if (!agent) {
-        res.status(400).json({ error: `Agente no encontrado: ${agentId}` });
+    let stationName: string | undefined;
+    if (stationId) {
+      const station = getStationById(stationId);
+      if (!station) {
+        res.status(400).json({ error: `Estación no encontrada: ${stationId}` });
         return;
       }
-      const configured = agent.printers.find(
-        (p) => p.windowsName === printerName && p.visible,
+      const configured = station.printers.find(
+        (p) => p.windowsName === printerName,
       );
       if (printerName && !configured) {
         res.status(400).json({
           error:
-            'La impresora no está visible/habilitada. Revisa Configuración de impresoras.',
+            'La impresora no está en el catálogo de la estación. Revisa Configuración de impresoras.',
         });
         return;
       }
-      agentName = agent.name;
+      stationName = station.name;
     }
 
     if (!printerName) {
       res.status(400).json({ error: 'Falta printerName (impresora Windows)' });
       return;
     }
-    if (!agentId) {
-      res.status(400).json({ error: 'Falta agentId (PC / zona de impresión)' });
+    if (!stationId) {
+      res.status(400).json({ error: 'Falta stationId (estación de impresión)' });
       return;
     }
 
@@ -843,8 +842,8 @@ router.post('/orders/:id/labels/print-direct', async (req: Request, res: Respons
       stockSize: stockSizeCode,
       paperName,
       printer: printerName,
-      agentId,
-      agentName,
+      stationId,
+      stationName,
       form: stockMeta
         ? { name: paperName, widthMm: result.widthMm, heightMm: result.heightMm }
         : { name: paperName, widthMm: result.widthMm, heightMm: result.heightMm },
@@ -853,8 +852,7 @@ router.post('/orders/:id/labels/print-direct', async (req: Request, res: Respons
     if (error instanceof Error) {
       const msg = error.message;
       if (
-        msg.includes('agente') ||
-        msg.includes('Agente') ||
+        msg.includes('Estación') ||
         msg.includes('imprimir') ||
         msg.includes('formulario') ||
         msg.includes('impresora') ||
@@ -1017,30 +1015,30 @@ router.post('/manual/labels/print-direct', async (req: Request, res: Response) =
       typeof req.body?.printerName === 'string' && req.body.printerName.trim()
         ? req.body.printerName.trim()
         : undefined;
-    const agentId =
-      typeof req.body?.agentId === 'string' && req.body.agentId.trim()
-        ? req.body.agentId.trim()
+    const stationId =
+      typeof req.body?.stationId === 'string' && req.body.stationId.trim()
+        ? req.body.stationId.trim()
         : undefined;
     const printMode = req.body?.printMode === 'cutter' ? 'cutter' : 'tear';
     const thermalMethod = req.body?.thermalMethod === 'transfer' ? 'transfer' : 'direct';
     const mediaType = req.body?.mediaType === 'continuous' ? 'continuous' : 'gap';
 
-    let agentName: string | undefined;
-    if (agentId) {
-      const agent = getAgentById(agentId);
-      if (!agent) throw new Error(`Agente no encontrado: ${agentId}`);
-      const configured = agent.printers.find(
-        (p) => p.windowsName === printerName && p.visible,
+    let stationName: string | undefined;
+    if (stationId) {
+      const station = getStationById(stationId);
+      if (!station) throw new Error(`Estación no encontrada: ${stationId}`);
+      const configured = station.printers.find(
+        (p) => p.windowsName === printerName,
       );
       if (printerName && !configured) {
         throw new Error(
-          'La impresora no está visible/habilitada. Revisa Configuración de impresoras.',
+          'La impresora no está en el catálogo de la estación. Revisa Configuración de impresoras.',
         );
       }
-      agentName = agent.name;
+      stationName = station.name;
     }
     if (!printerName) throw new Error('Falta printerName (impresora Windows)');
-    if (!agentId) throw new Error('Falta agentId (PC / zona de impresión)');
+    if (!stationId) throw new Error('Falta stationId (estación de impresión)');
 
     const { labels } = resolveLabelsFromRequest(order, merged, templateOverride);
     if (labels.length === 0) throw new Error('La orden no tiene etiquetas para generar');
@@ -1069,8 +1067,8 @@ router.post('/manual/labels/print-direct', async (req: Request, res: Response) =
       stockSize: stockSizeCode,
       paperName,
       printer: printerName,
-      agentId,
-      agentName,
+      stationId,
+      stationName,
       form: stockMeta
         ? { name: paperName, widthMm: result.widthMm, heightMm: result.heightMm }
         : { name: paperName, widthMm: result.widthMm, heightMm: result.heightMm },
@@ -1087,16 +1085,15 @@ router.post('/manual/labels/print-direct', async (req: Request, res: Response) =
         'Reparto inválido',
         'El reparto suma',
         'Falta printerName',
-        'Falta agentId',
-        'Agente no encontrado',
-        'El agente',
+        'Falta stationId',
+        'Estación no encontrada',
       ];
       const isValidation =
         validationPrefixes.some((p) => msg.startsWith(p)) ||
         msg === 'Índice de etiqueta fuera de rango' ||
         msg === 'No hay etiquetas que coincidan con la selección' ||
         msg.includes('no tiene etiquetas') ||
-        msg.includes('no está visible/habilitada');
+        msg.includes('no está en el catálogo de la estación');
       res.status(isValidation ? 400 : 502).json({ error: msg });
       return;
     }

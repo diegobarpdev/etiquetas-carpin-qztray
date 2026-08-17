@@ -1,5 +1,4 @@
 import type {
-  AdminAgent,
   AdminStation,
   AvailablePrinter,
   OrderListItem,
@@ -144,27 +143,25 @@ export function apiAdminLock() {
 }
 
 export function apiAdminConfig() {
-  return adminApi<{ agents: AdminAgent[]; stations: AdminStation[] }>(
-    '/api/admin/printers/config',
-  );
+  return adminApi<{ stations: AdminStation[] }>('/api/admin/printers/config');
 }
 
-export function apiAdminSaveConfig(agents: AdminAgent[], stations: AdminStation[]) {
+export function apiAdminSaveConfig(stations: AdminStation[]) {
   return adminApi('/api/admin/printers/config', {
     method: 'PUT',
-    body: JSON.stringify({ agents, stations }),
+    body: JSON.stringify({ stations }),
   });
 }
 
-export function apiAdminAddAgent(name: string) {
-  return adminApi('/api/admin/printers/agents', {
+export function apiAdminAddStation(name: string, code?: string) {
+  return adminApi('/api/admin/printers/stations', {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, code }),
   });
 }
 
-export function apiAdminDeleteAgent(agentId: string) {
-  return adminApi(`/api/admin/printers/agents/${encodeURIComponent(agentId)}`, {
+export function apiAdminDeleteStation(stationId: string) {
+  return adminApi(`/api/admin/printers/stations/${encodeURIComponent(stationId)}`, {
     method: 'DELETE',
   });
 }

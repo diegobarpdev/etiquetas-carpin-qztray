@@ -71,7 +71,7 @@ export function getPrinterForStock(
 ): PrinterSelection | null {
   const map = settings?.selectedPrinterByStock || {};
   const value = map[stockSize];
-  if (value && typeof value === 'object' && value.agentId && value.windowsName) {
+  if (value && typeof value === 'object' && value.stationId && value.windowsName) {
     return value;
   }
   return null;
@@ -160,15 +160,60 @@ export function buildPrintChecklist(stockSize: string): string[] {
   ];
 }
 
-export function encodePrinterValue(agentId: string, windowsName: string): string {
-  return `${agentId}::${windowsName}`;
+export function encodePrinterValue(stationId: string, windowsName: string): string {
+  return `${stationId}::${windowsName}`;
 }
 
 export function decodePrinterValue(value?: string | null): PrinterSelection | null {
   if (!value || !value.includes('::')) return null;
   const idx = value.indexOf('::');
   return {
-    agentId: value.slice(0, idx),
+    stationId: value.slice(0, idx),
     windowsName: value.slice(idx + 2),
   };
+}
+
+// ——— Impresoras "visibles" en esta PC ———
+//
+// El catálogo de impresoras es compartido (server), pero cuáles aparecen
+// para elegir en CADA PC es una marca local: por defecto ninguna. Cada
+// operario, en su propia PC, marca cuáles del catálogo completo son "las
+// suyas" — eso se guarda acá, en el navegador, nunca en el server.
+
+const LOCAL_VISIBLE_KEY = 'colineal-visible-printers';
+
+export function loadLocalVisiblePrinters(): Set<string> {
+  try {
+    const raw = localStorage.getItem(LOCAL_VISIBLE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? new Set(parsed.filter((v) => typeof v === 'string')) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveLocalVisiblePrinters(keys: Set<string>): void {
+  localStorage.setItem(LOCAL_VISIBLE_KEY, JSON.stringify([...keys]));
+}
+
+export function isPrinterLocallyVisible(stationId: string, windowsName: string): boolean {
+  return loadLocalVisiblePrinters().has(printerVisibilityKey(stationId, windowsName));
+}
+
+export function setPrinterLocallyVisible(
+  stationId: string,
+  windowsName: string,
+  visible: boolean,
+): Set<string> {
+  const keys = loadLocalVisiblePrinters();
+  const key = printerVisibilityKey(stationId, windowsName);
+  if (visible) keys.add(key);
+  else keys.delete(key);
+  saveLocalVisiblePrinters(keys);
+  return keys;
+}
+
+function printerVisibilityKey(stationId: string, windowsName: string): string {
+  return encodePrinterValue(stationId, windowsName);
 }

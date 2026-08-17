@@ -95,17 +95,16 @@ export interface AppliedPackingRow {
 }
 
 export interface AvailablePrinter {
-  agentId: string;
-  agentName: string;
+  stationId: string;
+  stationName: string;
   windowsName: string;
   label: string;
   stocks?: string[];
   matchesStock?: boolean;
-  stationCode?: string;
 }
 
 export interface PrinterSelection {
-  agentId: string;
+  stationId: string;
   windowsName: string;
 }
 
@@ -126,29 +125,15 @@ export interface HardwareProfile {
   mediaType: 'gap' | 'continuous';
 }
 
-export interface PrintAgentSyncedPrinter {
+export interface AdminStationPrinter {
   windowsName: string;
   label: string;
-  visible: boolean;
   stocks: string[];
-}
-
-export interface AdminAgent {
-  id: string;
-  name: string;
-  printers: PrintAgentSyncedPrinter[];
-}
-
-export interface AdminStationPrinter {
-  agentId: string;
-  windowsName: string;
 }
 
 export interface AdminStation {
   id: string;
   code: string;
   name: string;
-  agentId: string;
-  clientIps: string[];
   printers: AdminStationPrinter[];
 }

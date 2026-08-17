@@ -40,9 +40,11 @@ import {
   encodePrinterValue,
   getHardwareProfile,
   getPrinterForStock,
+  loadLocalVisiblePrinters,
   loadSettings,
   resolveHardwareSettings,
   saveSettings,
+  setPrinterLocallyVisible,
 } from '../lib/printer-settings';
 import { toast } from '../lib/toast';
 import { connectQz, printRawZpl, QzNotAvailableError } from '../lib/qz-client';
@@ -207,6 +209,9 @@ interface LabelsAppState {
   printerThermalMethod: 'transfer' | 'direct';
   onPrinterThermalMethodChange: (method: 'transfer' | 'direct') => void;
   availablePrinters: AvailablePrinter[];
+  visiblePrinters: AvailablePrinter[];
+  localVisibleKeys: Set<string>;
+  toggleLocalPrinterVisible: (stationId: string, windowsName: string, visible: boolean) => void;
   selectedPrinterValue: string;
   stockSize: string;
   onPrinterSelectChange: (value: string) => void;
@@ -283,6 +288,9 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
   const [stockSize, setStockSize] = useState('producto-terminado');
   const [selectedPrinterValue, setSelectedPrinterValue] = useState('');
   const [availablePrinters, setAvailablePrinters] = useState<AvailablePrinter[]>([]);
+  const [localVisibleKeys, setLocalVisibleKeys] = useState<Set<string>>(() =>
+    loadLocalVisiblePrinters(),
+  );
   const [printAgentStatusText, setPrintAgentStatusText] = useState('Comprobando agente…');
   const [printerSaveStatus, setPrinterSaveStatus] = useState('');
   const [printProgress, setPrintProgress] = useState<PrintProgressState>({ open: false });
@@ -1145,15 +1153,36 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
     printerSaveTimerRef.current = setTimeout(() => setPrinterSaveStatus(''), 2000);
   }
 
-  function fillDirectPrinterSelect(printers: AvailablePrinter[], stock: string) {
+  const visiblePrinters = useMemo(
+    () =>
+      availablePrinters.filter((p) =>
+        localVisibleKeys.has(encodePrinterValue(p.stationId, p.windowsName)),
+      ),
+    [availablePrinters, localVisibleKeys],
+  );
+
+  function toggleLocalPrinterVisible(stationId: string, windowsName: string, visible: boolean) {
+    const next = setPrinterLocallyVisible(stationId, windowsName, visible);
+    setLocalVisibleKeys(new Set(next));
+    fillDirectPrinterSelect(latest.current.availablePrinters, latest.current.stockSize, next);
+  }
+
+  function fillDirectPrinterSelect(
+    printers: AvailablePrinter[],
+    stock: string,
+    visibleKeys: Set<string> = localVisibleKeys,
+  ) {
     setAvailablePrinters(printers);
     latest.current.availablePrinters = printers;
+    const visible = printers.filter((p) =>
+      visibleKeys.has(encodePrinterValue(p.stationId, p.windowsName)),
+    );
     const saved = getPrinterForStock(loadSettings(), stock);
     const preferredSaved =
-      saved && printers.find((p) => p.agentId === saved.agentId && p.windowsName === saved.windowsName);
-    const preferredMatch = printers.find((p) => p.matchesStock !== false);
-    const pick = preferredSaved || preferredMatch || (printers.length === 1 ? printers[0] : null);
-    const value = pick ? encodePrinterValue(pick.agentId, pick.windowsName) : '';
+      saved && visible.find((p) => p.stationId === saved.stationId && p.windowsName === saved.windowsName);
+    const preferredMatch = visible.find((p) => p.matchesStock !== false);
+    const pick = preferredSaved || preferredMatch || (visible.length === 1 ? visible[0] : null);
+    const value = pick ? encodePrinterValue(pick.stationId, pick.windowsName) : '';
     setSelectedPrinterValue(value);
     latest.current.selectedPrinterValue = value;
   }
@@ -1167,7 +1196,14 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
       fillDirectPrinterSelect(printers, stock);
 
       if (printers.length === 0) {
-        setPrintAgentStatusText('No hay impresoras disponibles.');
+        setPrintAgentStatusText('No hay impresoras en el catálogo. Pedile al admin que agregue una.');
+        return;
+      }
+      const hasVisible = printers.some((p) =>
+        localVisibleKeys.has(encodePrinterValue(p.stationId, p.windowsName)),
+      );
+      if (!hasVisible) {
+        setPrintAgentStatusText('No elegiste ninguna impresora para esta PC.');
         return;
       }
       try {
@@ -1318,7 +1354,7 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
     const settings = readPrinterSettingsFromUi();
     const body: Record<string, unknown> = { stockSize: settings.stockSize, copies: settings.copies };
     const selected = getPrinterForStock(settings, settings.stockSize);
-    if (selected?.agentId) body.agentId = selected.agentId;
+    if (selected?.stationId) body.stationId = selected.stationId;
     if (selected?.windowsName) body.printerName = selected.windowsName;
     if (settings.printMode) body.printMode = settings.printMode;
     if (settings.thermalMethod) body.thermalMethod = settings.thermalMethod;
@@ -1360,7 +1396,7 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
       jobs: jobsPayloadFromBatch(ctx.printBatch),
     };
     const selected = getPrinterForStock(settings, settings.stockSize);
-    if (selected?.agentId) body.agentId = selected.agentId;
+    if (selected?.stationId) body.stationId = selected.stationId;
     if (selected?.windowsName) body.printerName = selected.windowsName;
     if (settings.printMode) body.printMode = settings.printMode;
     if (settings.thermalMethod) body.thermalMethod = settings.thermalMethod;
@@ -1370,9 +1406,9 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
     return body;
   }
 
-  function resolvePrinterLabel(selected: { agentId: string; windowsName: string }): string {
+  function resolvePrinterLabel(selected: { stationId: string; windowsName: string }): string {
     const match = availablePrinters.find(
-      (p) => p.agentId === selected.agentId && p.windowsName === selected.windowsName,
+      (p) => p.stationId === selected.stationId && p.windowsName === selected.windowsName,
     );
     return (match?.label || selected.windowsName).trim() || selected.windowsName;
   }
@@ -1384,7 +1420,7 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
   async function printViaQz(settings: PrinterSettings) {
     const ctx = latest.current;
     const selected = getPrinterForStock(settings, settings.stockSize);
-    if (!selected?.agentId || !selected?.windowsName) {
+    if (!selected?.stationId || !selected?.windowsName) {
       throw new Error('Elige una impresora habilitada (Configuración → Impresoras) para este tipo de etiqueta.');
     }
     const useBatch = ctx.printBatch.length > 0;
@@ -1631,6 +1667,9 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
     printerThermalMethod,
     onPrinterThermalMethodChange,
     availablePrinters,
+    visiblePrinters,
+    localVisibleKeys,
+    toggleLocalPrinterVisible,
     selectedPrinterValue,
     stockSize,
     onPrinterSelectChange,
