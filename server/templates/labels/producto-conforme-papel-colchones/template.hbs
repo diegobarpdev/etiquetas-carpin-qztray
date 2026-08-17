@@ -1,0 +1,52 @@
+<div class="label-producto-conforme-papel-colchones{{#if showKitSubproduct}} label-producto-conforme-papel-colchones--kit{{/if}}">
+  <div class="label">
+    <header class="el-header">
+      <h1 class="el-title">{{conformeTitle}}</h1>
+      <p class="el-subtitle">{{conformeSubtitle}}</p>
+    </header>
+
+    <div class="el-divider"></div>
+
+    <section class="el-product-band">
+      <img src="{{logoDataUri}}" alt="COLINEAL" class="el-logo" />
+      <div class="el-product-text-box">
+        {{#if showKitSubproduct}}
+        <p class="el-product-line1">{{productName}}</p>
+        <p class="el-product-line2">
+          <span class="el-product-name">{{subproductName}}</span>
+          <span class="el-serial">{{serialCurrent}} / {{serialTotal}}</span>
+        </p>
+        {{else}}
+        <p class="el-product-line-single">
+          <span class="el-product-name">{{productName}}</span>
+          <span class="el-serial">{{serialCurrent}} / {{serialTotal}}</span>
+        </p>
+        {{/if}}
+      </div>
+    </section>
+
+    <section class="el-body">
+      <div class="el-meta">
+        <p><span class="meta-label">PESO:</span> <span class="meta-value">{{weightKg}} kg</span></p>
+        <p><span class="meta-label">FECHA:</span> <span class="meta-value">{{productionDate}}</span></p>
+        <p><span class="meta-label">HECHO EN:</span> <span class="meta-value">{{madeIn}}</span></p>
+        <p class="el-inspector-row">
+          <span class="meta-label">Inspector:</span>
+          <span class="meta-value meta-inspector">{{inspectorName}}</span>
+        </p>
+      </div>
+
+      <div class="el-qr-col">
+        <span class="qr-code">{{ean}}</span>
+        <img src="{{qrSku}}" alt="SKU QR" class="el-qr" />
+        <span class="qr-caption">SKU</span>
+      </div>
+
+      <div class="el-qr-col">
+        <span class="qr-code">{{lotNumber}}</span>
+        <img src="{{qrLotNumber}}" alt="Lote QR" class="el-qr" />
+        <span class="qr-caption">LOTE</span>
+      </div>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,192 @@
+.label-producto-conforme-papel {
+  width: 60mm;
+  height: 90mm;
+  position: relative;
+  overflow: hidden;
+  page-break-inside: avoid;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+/* Diseño horizontal, rotado 90° para papel vertical 60 × 90.
+   Márgenes ~3mm laterales y ~2mm arriba/abajo para que no corte al imprimir. */
+.label-producto-conforme-papel .label {
+  width: 86mm;
+  height: 54mm;
+  position: absolute;
+  top: 2mm;
+  left: 57mm;
+  transform: rotate(90deg);
+  transform-origin: top left;
+  box-sizing: border-box;
+  border: 0.35mm solid #000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1.5mm 1.8mm;
+}
+
+.label-producto-conforme-papel .el-header {
+  flex: 0 0 auto;
+  padding: 0.8mm 1.2mm 0.6mm;
+  text-align: center;
+}
+
+.label-producto-conforme-papel .el-title {
+  margin: 0;
+  font-size: 9.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.label-producto-conforme-papel .el-subtitle {
+  margin: 0.5mm 0 0;
+  font-size: 5.2pt;
+  line-height: 1.15;
+}
+
+.label-producto-conforme-papel .el-divider {
+  flex: 0 0 auto;
+  height: 0;
+  border-top: 0.3mm solid #000;
+}
+
+.label-producto-conforme-papel .el-product-band {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 12mm 1fr;
+  column-gap: 1.4mm;
+  padding: 0.8mm 1.2mm;
+  align-items: center;
+  min-height: 10mm;
+}
+
+.label-producto-conforme-papel .el-logo {
+  grid-column: 1;
+  width: 10mm;
+  height: 8.5mm;
+  object-fit: contain;
+  align-self: center;
+  padding: 1mm;
+  box-sizing: content-box;
+}
+
+.label-producto-conforme-papel .el-product-text-box {
+  grid-column: 2;
+  border: none;
+  padding: 0.8mm 1.1mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.4mm;
+  min-height: 8.5mm;
+  min-width: 0;
+}
+
+.label-producto-conforme-papel .el-product-line1,
+.label-producto-conforme-papel .el-product-line2,
+.label-producto-conforme-papel .el-product-line-single {
+  margin: 0;
+  font-size: 6.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  line-height: 1.12;
+  word-break: break-word;
+}
+
+.label-producto-conforme-papel .el-product-line2,
+.label-producto-conforme-papel .el-product-line-single {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1.2mm;
+}
+
+.label-producto-conforme-papel .el-product-name {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.label-producto-conforme-papel .el-serial {
+  flex: 0 0 auto;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.label-producto-conforme-papel .el-body {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr;
+  column-gap: 1.4mm;
+  padding: 0.8mm 1.2mm 1.2mm;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.label-producto-conforme-papel .el-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  height: 100%;
+  min-height: 0;
+}
+
+.label-producto-conforme-papel .el-meta p {
+  margin: 0;
+  font-size: 6.2pt;
+  line-height: 1.2;
+}
+
+.label-producto-conforme-papel .meta-label {
+  font-weight: bold;
+}
+
+.label-producto-conforme-papel .meta-value {
+  font-weight: normal;
+}
+
+.label-producto-conforme-papel .meta-inspector {
+  display: inline;
+  word-break: break-word;
+}
+
+.label-producto-conforme-papel .el-inspector-row {
+  min-width: 0;
+}
+
+.label-producto-conforme-papel .el-qr-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  text-align: center;
+  min-width: 0;
+  height: 100%;
+}
+
+.label-producto-conforme-papel .qr-code {
+  font-size: 5.2pt;
+  font-weight: bold;
+  line-height: 1.1;
+  margin: 0;
+  word-break: break-all;
+}
+
+.label-producto-conforme-papel .el-qr {
+  width: 20mm;
+  height: 20mm;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.label-producto-conforme-papel .qr-caption {
+  margin: 0;
+  font-size: 5.8pt;
+  font-weight: bold;
+  line-height: 1;
+}

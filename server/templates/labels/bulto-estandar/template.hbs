@@ -1,0 +1,56 @@
+<div class="label-bulto-estandar{{#unless showInternalRefQr}} label-bulto-estandar--two-qr{{/unless}}">
+<div class="label">
+  <div class="border-box"></div>
+
+  <img src="{{logoDataUri}}" alt="COLINEAL" class="el-logo" />
+
+  <h1 class="el-product-title">{{productName}}</h1>
+
+  <p class="el-short-name">{{shortName}}</p>
+
+  <p class="el-bulto">BULTO: {{bultoCurrent}}-{{bultoTotal}}</p>
+
+  <p class="el-cantidad">CANTIDAD: {{quantity}}</p>
+
+  <div class="el-peso">
+    <span class="meta-label">PESO</span>
+    <span class="meta-value">{{weightKg}} Kg</span>
+  </div>
+
+  <div class="el-fecha">
+    <span class="meta-label">FECHA:</span>
+    <span class="meta-value">{{productionDate}}</span>
+  </div>
+
+  <table class="el-dimensions">
+    <tr><td>ALTO</td><td>{{height}}</td></tr>
+    <tr><td>LARGO</td><td>{{length}}</td></tr>
+    <tr><td>ANCHO</td><td>{{width}}</td></tr>
+    <tr><td>VOLUMEN</td><td>{{volumeM3}} m³</td></tr>
+  </table>
+
+  <div class="el-qr-text el-qr-text1">
+    <span class="qr-label">SKU</span>
+    <span class="qr-value">{{ean}}</span>
+  </div>
+  <img src="{{qrSku}}" alt="SKU QR" class="el-qr el-qr1" />
+
+  {{#if showInternalRefQr}}
+  <div class="el-qr-text el-qr-text2">
+    <span class="qr-label">{{#if showKitSubproduct}}SUB{{else}}REF{{/if}}</span>
+    <span class="qr-value">{{internalRef}}</span>
+  </div>
+  <img src="{{qrInternalRef}}" alt="Ref QR" class="el-qr el-qr2" />
+  {{/if}}
+
+  <div class="el-qr-text el-qr-text3">
+    <span class="qr-label">No. LOTE</span>
+    <span class="qr-value">{{lotNumber}}</span>
+  </div>
+  <img src="{{qrLotNumber}}" alt="Lote QR" class="el-qr el-qr3" />
+
+  <div class="el-factory-line"></div>
+
+  <footer class="el-factory">{{factoryFooter}}</footer>
+</div>
+</div>

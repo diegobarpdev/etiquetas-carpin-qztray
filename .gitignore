@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+coverage/
+
+logs/
+data/printers-config.json
+data/qz-cert.pem
+data/qz-key.pem
+cloudflared.exe
+_legacy_*/
+

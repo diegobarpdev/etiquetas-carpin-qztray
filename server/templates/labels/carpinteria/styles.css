@@ -1,0 +1,169 @@
+.label-carpinteria {
+  width: 100mm;
+  height: 70mm;
+  page-break-inside: avoid;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000;
+  background: #fff;
+}
+
+.label-carpinteria .label {
+  width: 100mm;
+  height: 70mm;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 3.5mm 3.5mm 3mm 4mm;
+}
+
+.label-carpinteria .el-header {
+  flex: 0 0 auto;
+  margin: 0 0 1.2mm;
+  font-size: 10.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: left;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.label-carpinteria .el-body {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  column-gap: 2.5mm;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.label-carpinteria .el-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.label-carpinteria .el-logo {
+  width: 42mm;
+  height: 13mm;
+  object-fit: contain;
+  object-position: left center;
+  flex: 0 0 auto;
+  margin-bottom: 1mm;
+  padding: 1.5mm;
+  box-sizing: content-box;
+}
+
+.label-carpinteria .el-details {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  min-height: 0;
+}
+
+.label-carpinteria .el-details p {
+  margin: 0;
+  font-size: 8.2pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+
+.label-carpinteria .el-short-name,
+.label-carpinteria .el-inspector {
+  word-break: break-word;
+}
+
+.label-carpinteria .el-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  height: 100%;
+  align-items: stretch;
+  min-width: 0;
+  gap: 1.5mm;
+}
+
+.label-carpinteria .el-barcode-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.label-carpinteria .el-barcode-block--primary {
+  flex: 1.35 1 0;
+}
+
+.label-carpinteria .el-barcode-block--secondary {
+  flex: 0.75 1 0;
+}
+
+.label-carpinteria .el-barcode-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8mm;
+  min-height: 0;
+}
+
+.label-carpinteria .el-ean-prefix {
+  flex: 0 0 auto;
+  font-size: 8pt;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.label-carpinteria .el-barcode {
+  flex: 0 0 auto;
+  width: 46mm;
+  max-width: 46mm;
+  height: 17mm;
+  object-fit: fill;
+}
+
+.label-carpinteria .el-barcode-block--secondary .el-barcode {
+  width: 32mm;
+  max-width: 32mm;
+  height: 11mm;
+}
+
+.label-carpinteria .el-barcode-block--secondary .el-ean-prefix {
+  font-size: 6.5pt;
+}
+
+.label-carpinteria .el-barcode-text {
+  margin: 0.4mm 0 0;
+  padding-left: 3.5mm;
+  box-sizing: border-box;
+  width: 49.5mm; /* prefijo + barras, para centrar el texto bajo el EAN */
+  font-size: 8pt;
+  font-weight: bold;
+  letter-spacing: 0.2mm;
+  white-space: nowrap;
+  line-height: 1;
+  text-align: center;
+}
+
+.label-carpinteria .el-barcode-block--secondary .el-barcode-text {
+  margin: 0.25mm 0 0;
+  padding-left: 2.5mm;
+  width: 34.5mm; /* prefijo + barras del secundario */
+  font-size: 6.5pt;
+  letter-spacing: 0.12mm;
+}
+
+.label-carpinteria .el-footer {
+  flex: 0 0 auto;
+  margin-top: 1mm;
+  font-size: 8.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.15;
+}

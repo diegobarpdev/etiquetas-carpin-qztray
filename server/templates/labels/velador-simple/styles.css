@@ -1,0 +1,10 @@
+.label-velador-simple {
+  font-family: Arial, sans-serif;
+  padding: 5mm;
+  font-size: 8pt;
+}
+
+.label-velador-simple h1 {
+  font-size: 10pt;
+  margin-bottom: 3mm;
+}

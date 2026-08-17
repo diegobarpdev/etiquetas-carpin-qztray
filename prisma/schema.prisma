@@ -1,0 +1,110 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BomType {
+  kit
+  manufacture
+}
+
+enum OrderState {
+  draft
+  confirmed
+  done
+  cancelled
+}
+
+model LabelTemplate {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique
+  name         String
+  htmlTemplate String    @map("html_template")
+  css          String    @default("")
+  isActive     Boolean   @default(true) @map("is_active")
+  products     Product[]
+
+  @@map("label_templates")
+}
+
+model Product {
+  id              Int       @id @default(autoincrement())
+  ean             String
+  internalRef     String    @unique @map("internal_ref")
+  name            String
+  shortName       String?   @map("short_name")
+  weightKg        Decimal   @map("weight_kg") @db.Decimal(10, 4)
+  height          Decimal   @db.Decimal(10, 1)
+  width           Decimal   @db.Decimal(10, 1)
+  length          Decimal   @db.Decimal(10, 1)
+  volumeM3        Decimal   @map("volume_m3") @db.Decimal(10, 4)
+  numBultos       Int       @default(1) @map("num_bultos")
+  labelTemplateId Int       @map("label_template_id")
+  labelTemplate   LabelTemplate @relation(fields: [labelTemplateId], references: [id])
+  boms            BillOfMaterials[]
+  bomLines        BomLine[] @relation("ComponentProduct")
+  orderLines      ManufacturingOrderLine[]
+
+  @@map("products")
+}
+
+model BillOfMaterials {
+  id        Int      @id @default(autoincrement())
+  productId Int      @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id])
+  type      BomType
+  lines     BomLine[]
+
+  @@unique([productId])
+  @@map("bills_of_materials")
+}
+
+model BomLine {
+  id                  Int             @id @default(autoincrement())
+  bomId               Int             @map("bom_id")
+  bom                 BillOfMaterials @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  componentProductId  Int             @map("component_product_id")
+  componentProduct    Product         @relation("ComponentProduct", fields: [componentProductId], references: [id])
+  quantity            Decimal         @db.Decimal(10, 5)
+
+  @@map("bom_lines")
+}
+
+model ManufacturingOrder {
+  id              Int                    @id @default(autoincrement())
+  name            String                 @unique
+  lotNumber       String                 @map("lot_number")
+  productionDate  DateTime               @map("production_date") @db.Date
+  state           OrderState             @default(confirmed)
+  inspectorName   String?                @map("inspector_name")
+  lines           ManufacturingOrderLine[]
+
+  @@map("manufacturing_orders")
+}
+
+model ManufacturingOrderLine {
+  id        Int                @id @default(autoincrement())
+  orderId   Int                @map("order_id")
+  order     ManufacturingOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int                @map("product_id")
+  product   Product            @relation(fields: [productId], references: [id])
+  quantity  Decimal            @db.Decimal(10, 5)
+
+  @@map("manufacturing_order_lines")
+}
+
+/// Inspectores locales (no Odoo) para elegir en impresión.
+model Inspector {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("inspectors")
+}

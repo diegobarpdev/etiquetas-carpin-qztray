@@ -1,0 +1,42 @@
+<div class="label-carpenter-tela">
+  <div class="label">
+    <h1 class="el-header">{{productName}}</h1>
+
+    <div class="el-body">
+      <section class="el-left">
+        <img src="{{carpenterLogoDataUri}}" alt="Carpenter" class="el-logo" />
+
+        <div class="el-details">
+          <p class="el-short-name">{{shortName}}</p>
+          <p>N/S: {{serialCurrent}} - {{serialTotal}}</p>
+          {{#if showBultoLine}}
+          <p>BULTO: {{bultoCurrent}} - {{bultoTotal}}</p>
+          {{/if}}
+          <p>FECHA: {{productionDate}}</p>
+          <p>PESO: {{weightKg}} KG</p>
+          <p class="el-inspector-label">INSPECTOR DE CALIDAD:</p>
+          <p class="el-inspector">{{inspectorName}}</p>
+        </div>
+      </section>
+
+      <section class="el-right">
+        <div class="el-barcode-block el-barcode-block--primary">
+          <div class="el-barcode-row">
+            <span class="el-ean-prefix">{{barcodeEanPrefix}}</span>
+            <img src="{{barcodeEan}}" alt="EAN" class="el-barcode" />
+          </div>
+          <p class="el-barcode-text">{{barcodeEanBody}}</p>
+        </div>
+        <div class="el-barcode-block el-barcode-block--secondary">
+          <div class="el-barcode-row">
+            <span class="el-ean-prefix">{{barcodeRefPrefix}}</span>
+            <img src="{{barcodeRef}}" alt="Referencia" class="el-barcode" />
+          </div>
+          <p class="el-barcode-text">{{barcodeRefBody}}</p>
+        </div>
+      </section>
+    </div>
+
+    <footer class="el-footer">HECHO EN: {{madeIn}}</footer>
+  </div>
+</div>

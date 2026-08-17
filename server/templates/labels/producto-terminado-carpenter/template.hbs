@@ -1,0 +1,51 @@
+<div class="label-producto-terminado-carpenter">
+  <div class="label">
+    <header class="el-top">
+      <img src="{{carpenterLogoDataUri}}" alt="Carpenter" class="el-logo" />
+      <h1 class="el-product-title">{{productName}}</h1>
+    </header>
+
+    <section class="el-barcodes">
+      <div class="el-barcode-col el-barcode-col--sku">
+        <span class="el-barcode-caption">SKU</span>
+        <div class="el-barcode-row">
+          <span class="el-ean-prefix">{{barcodeEanPrefix}}</span>
+          <img src="{{barcodeEan}}" alt="SKU" class="el-barcode el-barcode--primary" />
+        </div>
+        <p class="el-barcode-text">{{barcodeEanBody}}</p>
+      </div>
+      <div class="el-barcode-col el-barcode-col--ns">
+        <span class="el-barcode-caption">N/S: {{barcodeRefFull}}</span>
+        <div class="el-barcode-row">
+          <span class="el-ean-prefix">{{barcodeRefPrefix}}</span>
+          <img src="{{barcodeRef}}" alt="N/S" class="el-barcode el-barcode--secondary" />
+        </div>
+        <p class="el-barcode-text">{{barcodeRefBody}}</p>
+      </div>
+    </section>
+
+    <section class="el-mid">
+      <p class="el-short-name">{{shortName}}</p>
+      <p class="el-bulto">BULTO: {{bultoCurrent}} - {{bultoTotal}}</p>
+      <p class="el-cantidad">CANTIDAD: {{quantity}}</p>
+    </section>
+
+    <section class="el-meta">
+      <div class="el-dims">
+        <p>LARGO: {{length}} CM</p>
+        <p>ANCHO: {{width}} CM</p>
+        <p>ALTO: {{height}} CM</p>
+        <p>VOLUMEN: {{volumeM3}} m³</p>
+      </div>
+      <div class="el-peso">
+        <p>PESO: {{weightKg}} KG</p>
+      </div>
+      <div class="el-fecha">
+        <p class="meta-label">FECHA:</p>
+        <p class="meta-value">{{productionDate}}</p>
+      </div>
+    </section>
+
+    <footer class="el-footer">HECHO EN: {{madeIn}}</footer>
+  </div>
+</div>

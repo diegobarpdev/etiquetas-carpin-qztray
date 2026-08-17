@@ -1,0 +1,273 @@
+/* Hoja nativa 150 × 100 mm (horizontal). Sin rotate CSS: Puppeteer PDF lo rompe. */
+.label-bulto-estandar {
+  width: 150mm;
+  height: 100mm;
+  position: relative;
+  overflow: hidden;
+  page-break-inside: avoid;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9pt;
+  color: #000;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.label-bulto-estandar .label {
+  width: 150mm;
+  height: 100mm;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.label-bulto-estandar .border-box {
+  position: absolute;
+  top: 4mm;
+  left: 4mm;
+  right: 4mm;
+  bottom: 4mm;
+  border: 0.35mm solid #000;
+  pointer-events: none;
+}
+
+.label-bulto-estandar .label > *:not(.border-box) {
+  position: absolute;
+  overflow: hidden;
+}
+
+.label-bulto-estandar .el-peso,
+.label-bulto-estandar .el-fecha,
+.label-bulto-estandar .el-dimensions {
+  overflow: visible;
+}
+
+.label-bulto-estandar .el-logo {
+  left: 6.5mm;
+  top: 5.5mm;
+  width: 14mm;
+  height: 14mm;
+  object-fit: contain;
+  padding: 0.5mm;
+  box-sizing: border-box;
+}
+
+.label-bulto-estandar .el-product-title {
+  left: 22mm;
+  top: 5.5mm;
+  width: 122mm;
+  height: 12.5mm;
+  max-height: 12.5mm;
+  font-size: 10.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: left;
+  line-height: 1.1;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.label-bulto-estandar .el-short-name {
+  left: 27mm;
+  top: 54mm;
+  width: 96mm;
+  height: 9.5mm;
+  max-height: 9.5mm;
+  font-size: 8.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.12;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.label-bulto-estandar .el-bulto {
+  left: 45mm;
+  top: 70mm;
+  width: 60mm;
+  height: 6mm;
+  font-size: 10pt;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.label-bulto-estandar .el-cantidad {
+  left: 45mm;
+  top: 76mm;
+  width: 60mm;
+  height: 6mm;
+  font-size: 10pt;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.label-bulto-estandar .el-peso,
+.label-bulto-estandar .el-fecha {
+  left: 7mm;
+  width: 55mm;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.2mm;
+  font-size: 9.5pt;
+  font-weight: bold;
+  text-align: left;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.label-bulto-estandar .el-peso {
+  top: 68mm;
+  height: 10mm;
+}
+
+.label-bulto-estandar .el-fecha {
+  top: 77.5mm;
+  height: 10mm;
+}
+
+.label-bulto-estandar .el-peso .meta-label,
+.label-bulto-estandar .el-fecha .meta-label,
+.label-bulto-estandar .el-peso .meta-value,
+.label-bulto-estandar .el-fecha .meta-value {
+  display: block;
+  font-weight: bold;
+}
+
+.label-bulto-estandar .el-dimensions {
+  left: 108mm;
+  top: auto;
+  bottom: 12.5mm;
+  width: 34mm;
+  height: auto;
+  border-collapse: collapse;
+  font-size: 8pt;
+  text-align: center;
+  table-layout: fixed;
+}
+
+.label-bulto-estandar .el-dimensions td {
+  border: 0.3mm solid #000;
+  padding: 1mm 1.2mm;
+  line-height: 1.15;
+  vertical-align: middle;
+}
+
+.label-bulto-estandar .el-dimensions td:first-child {
+  font-weight: bold;
+  background: #f5f5f5;
+}
+
+.label-bulto-estandar .el-qr {
+  width: 28mm;
+  height: 28mm;
+  object-fit: contain;
+}
+
+.label-bulto-estandar .el-qr1 {
+  left: 18mm;
+  top: 24.5mm;
+}
+
+.label-bulto-estandar .el-qr2 {
+  left: 61mm;
+  top: 24.5mm;
+}
+
+.label-bulto-estandar .el-qr3 {
+  left: 104mm;
+  top: 24.5mm;
+}
+
+.label-bulto-estandar .el-qr-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  text-align: center;
+  height: 7mm;
+  overflow: visible;
+}
+
+.label-bulto-estandar .el-qr-text1 {
+  left: 14mm;
+  top: 17.5mm;
+  width: 36mm;
+}
+
+.label-bulto-estandar .el-qr-text2 {
+  left: 57mm;
+  top: 17.5mm;
+  width: 36mm;
+}
+
+.label-bulto-estandar .el-qr-text3 {
+  left: 100mm;
+  top: 17.5mm;
+  width: 36mm;
+}
+
+/* Productos sin referencia interna: solo SKU + lote (2 QR centrados) */
+.label-bulto-estandar--two-qr .el-qr1 {
+  left: 32mm;
+  top: 24.5mm;
+}
+
+.label-bulto-estandar--two-qr .el-qr3 {
+  left: 90mm;
+  top: 24.5mm;
+}
+
+.label-bulto-estandar--two-qr .el-qr-text1 {
+  left: 28mm;
+  top: 17.5mm;
+  width: 36mm;
+}
+
+.label-bulto-estandar--two-qr .el-qr-text3 {
+  left: 86mm;
+  top: 17.5mm;
+  width: 36mm;
+}
+
+.label-bulto-estandar .qr-label,
+.label-bulto-estandar .qr-value {
+  font-size: 6.5pt;
+  font-weight: bold;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.label-bulto-estandar .qr-value {
+  letter-spacing: -0.15px;
+}
+
+.label-bulto-estandar .el-factory-line {
+  left: 6mm;
+  top: 88mm;
+  width: 138mm;
+  height: 0;
+  border-top: 0.35mm solid #000;
+}
+
+.label-bulto-estandar .el-factory {
+  left: 6mm;
+  top: 90.5mm;
+  width: 138mm;
+  height: 6mm;
+  font-size: 6.5pt;
+  text-align: center;
+  line-height: 1.2;
+}
