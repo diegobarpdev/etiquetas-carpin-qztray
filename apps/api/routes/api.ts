@@ -29,11 +29,13 @@ import { createRateLimiter } from '../lib/rate-limit';
 import printersRouter from './printers';
 import qzRouter from './qz';
 import inspectorsRouter from './inspectors';
+import adminUsersRouter from './admin-users';
 
 const router = Router();
 router.use(printersRouter);
 router.use(qzRouter);
 router.use(inspectorsRouter);
+router.use(adminUsersRouter);
 
 /**
  * Cada request acá dispara un render de PDF con Puppeteer (y para los de

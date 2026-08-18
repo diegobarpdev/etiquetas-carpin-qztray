@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
-import { requirePrintAdmin } from '../services/print-admin-auth.service';
+import { requireAdmin } from '../lib/user-session';
 import {
   createInspector,
   deleteInspector,
@@ -40,7 +40,7 @@ router.get('/inspectors', async (_req: Request, res: Response) => {
   }
 });
 
-router.get('/admin/inspectors', requirePrintAdmin, async (_req: Request, res: Response) => {
+router.get('/admin/inspectors', requireAdmin, async (_req: Request, res: Response) => {
   try {
     const rows = await listInspectors();
     res.json(rows);
@@ -50,7 +50,7 @@ router.get('/admin/inspectors', requirePrintAdmin, async (_req: Request, res: Re
   }
 });
 
-router.post('/admin/inspectors', requirePrintAdmin, async (req: Request, res: Response) => {
+router.post('/admin/inspectors', requireAdmin, async (req: Request, res: Response) => {
   try {
     const row = await createInspector(req.body?.name);
     res.status(201).json(row);
@@ -59,7 +59,7 @@ router.post('/admin/inspectors', requirePrintAdmin, async (req: Request, res: Re
   }
 });
 
-router.patch('/admin/inspectors/:id', requirePrintAdmin, async (req: Request, res: Response) => {
+router.patch('/admin/inspectors/:id', requireAdmin, async (req: Request, res: Response) => {
   try {
     const id = parseInt(String(req.params.id), 10);
     if (!Number.isFinite(id) || id <= 0) {
@@ -76,7 +76,7 @@ router.patch('/admin/inspectors/:id', requirePrintAdmin, async (req: Request, re
   }
 });
 
-router.delete('/admin/inspectors/:id', requirePrintAdmin, async (req: Request, res: Response) => {
+router.delete('/admin/inspectors/:id', requireAdmin, async (req: Request, res: Response) => {
   try {
     const id = parseInt(String(req.params.id), 10);
     if (!Number.isFinite(id) || id <= 0) {

@@ -1,14 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { LABEL_STOCK_SIZES, LabelStockSizeCode } from '../config/constants';
-import { getRequestClientIp } from '../lib/request-ip';
-import {
-  clearAdminSession,
-  createAdminSession,
-  getAdminSessionStatus,
-  getUnlockLockStatus,
-  requirePrintAdmin,
-  verifyAdminPin,
-} from '../services/print-admin-auth.service';
+import { requireAdmin } from '../lib/user-session';
 import {
   AvailablePrinter,
   ConfiguredStation,
@@ -64,33 +56,7 @@ function buildAvailablePrinters(stockSize?: string): { printers: AvailablePrinte
   return { printers: results };
 }
 
-router.post('/admin/printers/unlock', (req: Request, res: Response) => {
-  const ip = getRequestClientIp(req);
-  const lock = getUnlockLockStatus(ip);
-  if (lock.locked) {
-    res.status(429).json({
-      error: `Demasiados intentos. Probá de nuevo en ${Math.ceil(lock.retryAfterMs / 1000)}s.`,
-    });
-    return;
-  }
-  if (!verifyAdminPin(req.body?.pin, ip)) {
-    res.status(401).json({ error: 'Clave incorrecta' });
-    return;
-  }
-  createAdminSession(req, res);
-  res.json({ ok: true, unlocked: true });
-});
-
-router.post('/admin/printers/lock', (req: Request, res: Response) => {
-  clearAdminSession(req, res);
-  res.json({ ok: true, unlocked: false });
-});
-
-router.get('/admin/printers/session', (req: Request, res: Response) => {
-  res.json(getAdminSessionStatus(req));
-});
-
-router.get('/admin/printers/config', requirePrintAdmin, (_req: Request, res: Response) => {
+router.get('/admin/printers/config', requireAdmin, (_req: Request, res: Response) => {
   const config = readConfig();
   res.json({
     stations: config.stations || [],
@@ -98,7 +64,7 @@ router.get('/admin/printers/config', requirePrintAdmin, (_req: Request, res: Res
   });
 });
 
-router.put('/admin/printers/config', requirePrintAdmin, (req: Request, res: Response) => {
+router.put('/admin/printers/config', requireAdmin, (req: Request, res: Response) => {
   try {
     const body = req.body as PrintersConfig;
     if (!body || !Array.isArray(body.stations)) {
@@ -113,7 +79,7 @@ router.put('/admin/printers/config', requirePrintAdmin, (req: Request, res: Resp
   }
 });
 
-router.post('/admin/printers/stations', requirePrintAdmin, (req: Request, res: Response) => {
+router.post('/admin/printers/stations', requireAdmin, (req: Request, res: Response) => {
   try {
     const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
     const code = typeof req.body?.code === 'string' ? req.body.code.trim().toUpperCase() : '';
@@ -148,7 +114,7 @@ router.post('/admin/printers/stations', requirePrintAdmin, (req: Request, res: R
 
 router.delete(
   '/admin/printers/stations/:stationId',
-  requirePrintAdmin,
+  requireAdmin,
   (req: Request, res: Response) => {
     const config = readConfig();
     const stationId = String(req.params.stationId);

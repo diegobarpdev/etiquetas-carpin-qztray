@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react';
 import { AppAccessGate } from './components/AppAccessGate';
+import { AuthProvider } from './context/AuthContext';
 import { LabelsAppProvider, useLabelsApp } from './context/LabelsAppContext';
 import { Topbar } from './components/Topbar';
 import { OrderSearch } from './components/OrderSearch';
@@ -94,10 +95,12 @@ function AppShell() {
 
 export default function App() {
   return (
-    <AppAccessGate>
-      <LabelsAppProvider>
-        <AppShell />
-      </LabelsAppProvider>
-    </AppAccessGate>
+    <AuthProvider>
+      <AppAccessGate>
+        <LabelsAppProvider>
+          <AppShell />
+        </LabelsAppProvider>
+      </AppAccessGate>
+    </AuthProvider>
   );
 }

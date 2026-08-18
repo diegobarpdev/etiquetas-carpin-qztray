@@ -42,44 +42,48 @@ apps/api/      API Express + prisma/ + assets/ (logos) + data/ (config/certifica
 
 ## Seguridad
 
-**Toda la app (`/api/*`, salvo el propio desbloqueo) pide un PIN**
-(`APP_ACCESS_PIN`) la primera vez que se abre en una PC. Al ingresarlo
-queda una cookie `HttpOnly` válida por **30 días** ("confiar en esta PC")
-— el operario no vuelve a loguearse en cada uso, solo cuando esa PC nunca
-entró o pasaron los 30 días. Es un PIN de acceso general, **distinto** del
-PIN de `Configuración → Impresoras` (`PRINT_ADMIN_PIN`, sesión de 30
-minutos): ese segundo PIN sigue protegiendo solo el catálogo de
-impresoras/estaciones, como una capa extra dentro de la app ya
-desbloqueada.
+**Cuentas reales por persona** (email + clave), no un PIN compartido.
+Cualquiera puede registrarse desde la pantalla de acceso, pero la cuenta
+queda `pending` hasta que un admin la aprueba desde `Configuración →
+Usuarios` — sin eso no puede loguearse. Hay 2 roles: `operario` (buscar
+e imprimir) y `admin` (además, `Configuración → Impresoras/Inspectores/
+Usuarios`). La sesión (cookie `HttpOnly`, `SameSite=Lax`, `Secure` si la
+conexión es HTTPS) dura 30 días, pero el rol/estado del usuario se relee
+de la base en cada request — aprobar, rechazar, promover o degradar a
+alguien surte efecto de inmediato, sin esperar a que expire la sesión.
 
-Esto sigue asumiendo que **el server solo es alcanzable desde la red
-interna de la fábrica**, nunca desde internet (sin VPN, sin
-port-forward, sin túnel tipo Cloudflare — hubo uno hace tiempo, se dio de
-baja, verificado que no corre ningún proceso/servicio/tarea programada de
-eso hoy). El PIN de acceso frena a cualquiera que llegue a la red interna
-sin ser operario; no reemplaza mantener esa red cerrada hacia afuera.
+Pensado para exponerse más allá de la LAN de la fábrica (con TLS propio
+delante) — a diferencia del PIN compartido de antes, cortar acceso a una
+persona puntual ya no obliga a cambiarle la clave a todos. Aun así el
+`X-Internal-Key` sigue siendo la única barrera contra pedidos directos al
+puerto de la API sin pasar por el proxy del front.
 
 Lo que está cubierto hoy:
-- `APP_ACCESS_PIN`: gate de sesión (30 días) sobre toda la API, con
-  rate-limit y bloqueo progresivo por IP en `/api/app/unlock` igual que el
-  de admin de impresoras.
-- `PRINT_ADMIN_PIN`: segundo gate (sesión de 30 min) solo para
-  `Configuración → Impresoras`.
+- Auto-registro con aprobación de admin; claves con `scrypt` (nativo de
+  Node, salteado, sin dependencia externa).
+- Rol `admin`/`operario` releído en vivo desde la DB en cada request
+  (`requireLogin`/`requireAdmin`, `apps/api/lib/user-session.ts`) — no
+  hay claim de rol viajando en la cookie que pueda quedar desactualizado.
+- Guarda de "último admin": no se puede rechazar ni degradar al único
+  admin aprobado que queda (`apps/api/routes/admin-users.ts`).
+- Rate-limit (10/min login, 5/min registro) por IP contra fuerza bruta,
+  además del rate-limit (20/min por IP) en los 7 endpoints que renderizan
+  PDF con Puppeteer.
 - `X-Internal-Key` en `/api/*`: bloquea pedidos directos al puerto de la
   API que no pasen por el proxy del front (ver `apps/web/server.ts` /
   `apps/web/vite.config.ts`).
-- Rate-limit (20/min por IP) en los 6 endpoints que renderizan PDF con
-  Puppeteer — evita un DoS trivial por loop descontrolado.
 - CORS con allowlist de orígenes (no refleja cualquier origen).
 
-**¿Se olvidó un PIN, hay que rotarlo, o alguien se fue de la empresa y
-hay que cortar el acceso ya?** Ver
-[`docs/seguridad-auth.md`](docs/seguridad-auth.md) — ahí está el
-procedimiento para cada caso. Resumen rápido:
-- PIN olvidado: mirar el valor real en `.env` (`APP_ACCESS_PIN`/
-  `PRINT_ADMIN_PIN`) y pasarlo de nuevo — no hace falta reiniciar nada.
-- Rotar un PIN: cambiarlo en `.env` + reiniciar la API. Las sesiones ya
-  abiertas siguen vivas hasta que expiren (no las corta el cambio de PIN).
-- Cortar todo acceso ya (ej. alguien se va de la empresa): rotar
-  `INTERNAL_API_KEY` (invalida TODAS las sesiones de una) — detalle en
-  el doc.
+**¿Cómo entro la primera vez, cómo apruebo gente, o alguien se fue de la
+empresa y hay que cortar el acceso ya?** Ver
+[`docs/seguridad-auth.md`](docs/seguridad-auth.md) — procedimiento para
+cada caso. Resumen rápido:
+- Primera vez: definir `BOOTSTRAP_ADMIN_EMAIL`/`BOOTSTRAP_ADMIN_PASSWORD`
+  en `.env` antes de arrancar — crea el primer admin si no existe.
+- Aprobar/rechazar/promover/resetear clave de alguien: `Configuración →
+  Usuarios`, como cualquier otro admin.
+- Cortar acceso a una persona ya: rechazarla desde ahí — efecto
+  inmediato, no hace falta esperar a que expire su sesión.
+- Cortar TODO acceso de una (ej. incidente grave): rotar
+  `INTERNAL_API_KEY` en `.env` + reiniciar — invalida todas las sesiones
+  de una (la firma de la cookie deja de calzar).

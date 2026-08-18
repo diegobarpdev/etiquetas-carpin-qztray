@@ -1,29 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
-import { Printer, UserRound, X } from 'lucide-react';
-import {
-  apiAdminAddStation,
-  apiAdminConfig,
-  apiAdminDeleteStation,
-  apiAdminLock,
-  apiAdminSaveConfig,
-  apiAdminUnlock,
-} from '../lib/api';
+import { useEffect, useState } from 'react';
+import { Printer, UserRound, Users, X } from 'lucide-react';
+import { apiAdminAddStation, apiAdminConfig, apiAdminDeleteStation, apiAdminSaveConfig } from '../lib/api';
 import { useLabelsApp } from '../context/LabelsAppContext';
 import { listPrinters } from '../lib/qz-client';
 import { toast } from '../lib/toast';
 import type { AdminStation } from '../types';
 import { InspectorsAdminPanel } from './InspectorsAdminPanel';
+import { UsersAdminPanel } from './UsersAdminPanel';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 const STOCK_OPTIONS = [
@@ -33,7 +18,7 @@ const STOCK_OPTIONS = [
   { code: 'carpinteria', label: 'Carpenter' },
 ];
 
-type MainTab = 'inspectors' | 'printers';
+type MainTab = 'inspectors' | 'printers' | 'users';
 
 export function PrintersAdmin({
   open,
@@ -44,10 +29,6 @@ export function PrintersAdmin({
 }) {
   const { refreshAvailablePrinters } = useLabelsApp();
 
-  const [pinMode, setPinMode] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [pin, setPin] = useState('');
-  const [pinError, setPinError] = useState('');
   const [status, setStatus] = useState('');
   const [mainTab, setMainTab] = useState<MainTab>('inspectors');
   const [stations, setStations] = useState<AdminStation[]>([]);
@@ -58,7 +39,6 @@ export function PrintersAdmin({
   );
   const [detectedByStation, setDetectedByStation] = useState<Record<string, string[]>>({});
   const [detectingStation, setDetectingStation] = useState<string | null>(null);
-  const openRequestedRef = useRef(false);
 
   async function loadConfig() {
     setStatus('Cargando…');
@@ -71,53 +51,14 @@ export function PrintersAdmin({
     }
   }
 
-  async function openFlow() {
-    setPinError('');
-    setPin('');
-    // Siempre pedir clave: no reutilizar sesión previa del navegador.
-    try {
-      await apiAdminLock();
-    } catch {
-      /* si no había sesión, igual pedimos PIN */
-    }
-    setPinMode(true);
-  }
-
-  // Abrir automáticamente cuando `open` pasa a true.
   useEffect(() => {
-    if (open) {
-      if (!openRequestedRef.current) {
-        openRequestedRef.current = true;
-        void openFlow();
-      }
-    } else {
-      openRequestedRef.current = false;
-    }
+    if (open && mainTab === 'printers') void loadConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, mainTab]);
 
-  if (!open && !pinMode && !panelOpen) return null;
-
-  async function submitPin() {
-    setPinError('');
-    try {
-      await apiAdminUnlock(pin);
-      setPin('');
-      setPinMode(false);
-      setPanelOpen(true);
-      await loadConfig();
-    } catch (err: any) {
-      setPinError(err.message || 'Clave incorrecta');
-    }
-  }
+  if (!open) return null;
 
   function closeAll() {
-    setPin('');
-    setPinError('');
-    setPinMode(false);
-    setPanelOpen(false);
-    // Bloquear sesión en servidor (borra cookie HttpOnly). No esperar respuesta.
-    void apiAdminLock().catch(() => undefined);
     onClose();
   }
 
@@ -258,47 +199,6 @@ export function PrintersAdmin({
     );
   }
 
-  if (pinMode) {
-    return (
-      <Dialog open onOpenChange={(next) => !next && closeAll()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Configuración</DialogTitle>
-            <DialogDescription>Ingresa la clave de administración.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="printers-admin-pin">Clave</Label>
-            <Input
-              type="password"
-              id="printers-admin-pin"
-              autoComplete="current-password"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void submitPin();
-              }}
-            />
-            {pinError ? (
-              <p className="text-sm text-destructive" role="alert">
-                {pinError}
-              </p>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={closeAll}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={() => void submitPin()}>
-              Entrar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  if (!panelOpen) return null;
-
   const navItemClass =
     'flex min-h-[4.4rem] w-full flex-col items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-semibold text-slate-400 transition-colors [&_svg]:h-5 [&_svg]:w-5 [&_svg]:flex-shrink-0';
 
@@ -355,18 +255,35 @@ export function PrintersAdmin({
             <Printer aria-hidden="true" />
             Impresoras
           </button>
+          <button
+            type="button"
+            className={cn(
+              navItemClass,
+              mainTab === 'users'
+                ? 'bg-blue-500/20 text-white shadow-[inset_3px_0_0_0_#60a5fa]'
+                : 'hover:bg-slate-400/10 hover:text-slate-50',
+            )}
+            role="tab"
+            aria-selected={mainTab === 'users'}
+            onClick={() => setMainTab('users')}
+          >
+            <Users aria-hidden="true" />
+            Usuarios
+          </button>
         </nav>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden bg-white p-4">
           <div className="flex flex-shrink-0 items-start justify-between gap-4">
             <div>
               <h2 id="printers-admin-title" className="m-0 mb-0.5 text-lg font-semibold tracking-tight">
-                {mainTab === 'inspectors' ? 'Inspectores' : 'Impresoras'}
+                {mainTab === 'inspectors' ? 'Inspectores' : mainTab === 'printers' ? 'Impresoras' : 'Usuarios'}
               </h2>
               <p className="text-xs text-muted-foreground">
                 {mainTab === 'inspectors'
                   ? 'Lista local para elegir al imprimir (no reemplaza Odoo).'
-                  : 'Cada estación agrupa impresoras (catálogo compartido). Cuál usa cada PC lo elige el operario en su propio navegador, con el botón "Elegir mis impresoras".'}
+                  : mainTab === 'printers'
+                    ? 'Cada estación agrupa impresoras (catálogo compartido). Cuál usa cada PC lo elige el operario en su propio navegador, con el botón "Elegir mis impresoras".'
+                    : 'Aprobar/rechazar cuentas nuevas, promover a admin, resetear claves.'}
               </p>
             </div>
             <div className="flex flex-shrink-0 items-center gap-1.5">
@@ -412,7 +329,9 @@ export function PrintersAdmin({
 
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto pr-1">
             {mainTab === 'inspectors' ? (
-              <InspectorsAdminPanel active={mainTab === 'inspectors' && panelOpen} />
+              <InspectorsAdminPanel active={open && mainTab === 'inspectors'} />
+            ) : mainTab === 'users' ? (
+              <UsersAdminPanel active={open && mainTab === 'users'} />
             ) : (
               <div className="flex min-h-0 flex-1 flex-col gap-2">
                 <div className="flex items-baseline justify-between gap-3">

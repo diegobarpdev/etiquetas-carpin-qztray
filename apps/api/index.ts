@@ -7,8 +7,9 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import { config as loadEnv } from 'dotenv';
 import apiRouter from './routes/api';
-import appAccessRouter from './routes/app-access';
-import { appAccessAuth } from './services/app-access-auth.service';
+import authRouter from './routes/auth';
+import { requireLogin } from './lib/user-session';
+import { ensureBootstrapAdmin } from './services/bootstrap-admin.service';
 import { closeBrowser } from './services/pdf-generator.service';
 import { initPrintersConfig } from './services/printers-config.service';
 import { closeOdooPool, isOdooEnabled, odooHealth } from './lib/odoo';
@@ -21,27 +22,11 @@ if (existsSync(envPath)) {
   loadEnv({ path: envPath, override: true });
 }
 
-if (!process.env.PRINT_ADMIN_PIN || !process.env.PRINT_ADMIN_PIN.trim()) {
-  console.error(
-    '[FATAL] Falta PRINT_ADMIN_PIN en .env — no hay default por seguridad. ' +
-      'Configurá un PIN antes de arrancar (bloquea Configuración → Impresoras).',
-  );
-  process.exit(1);
-}
-
 const INTERNAL_API_KEY = String(process.env.INTERNAL_API_KEY || '').trim();
 if (!INTERNAL_API_KEY) {
   console.error(
     '[FATAL] Falta INTERNAL_API_KEY en .env — no hay default por seguridad. ' +
       'La API no acepta pedidos directos sin pasar por el proxy del front.',
-  );
-  process.exit(1);
-}
-
-if (!process.env.APP_ACCESS_PIN || !process.env.APP_ACCESS_PIN.trim()) {
-  console.error(
-    '[FATAL] Falta APP_ACCESS_PIN en .env — no hay default por seguridad. ' +
-      'Es el PIN que pide la app entera antes de buscar/imprimir.',
   );
   process.exit(1);
 }
@@ -58,6 +43,8 @@ if (!process.env.PUBLIC_URL) {
 initPrintersConfig();
 
 async function main() {
+  await ensureBootstrapAdmin();
+
   const app = express();
 
   // El front (apps/web/server.ts) proxifica con xfwd:true (manda
@@ -65,7 +52,7 @@ async function main() {
   // el que conecta es loopback (el propio proxy) — así req.secure refleja
   // si el browser habló HTTPS con el front, aunque el salto interno
   // front→API sea HTTP plano. Necesario para que la cookie de sesión
-  // (session-auth.ts) pueda poner Secure el día que se agregue TLS al
+  // (lib/user-session.ts) pueda poner Secure el día que se agregue TLS al
   // front, sin que nadie que hable directo con la API pueda spoofearlo.
   app.set('trust proxy', 'loopback');
 
@@ -127,12 +114,10 @@ async function main() {
     }
     next();
   });
-  // Rutas de desbloqueo/estado de sesión: sin gate (si no, nadie podría
-  // desbloquearse nunca).
-  app.use('/api', appAccessRouter);
-  // PIN de acceso general a la app (búsqueda/impresión) — separado del PIN
-  // de admin de impresoras, que sigue siendo un segundo gate más adentro.
-  app.use('/api', appAccessAuth.requireSession);
+  // Registro/login/logout/me: sin gate (si no, nadie podría loguearse
+  // nunca). El rol admin se revisa por ruta más adentro (requireAdmin).
+  app.use('/api', authRouter);
+  app.use('/api', requireLogin);
   app.use('/api', apiRouter);
 
   const server = app.listen(API_PORT, HOST, () => {

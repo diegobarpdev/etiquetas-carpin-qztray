@@ -108,3 +108,30 @@ model Inspector {
 
   @@map("inspectors")
 }
+
+enum Role {
+  operario
+  admin
+}
+
+enum UserStatus {
+  pending
+  approved
+  rejected
+}
+
+/// Cuentas reales por persona (reemplaza APP_ACCESS_PIN/PRINT_ADMIN_PIN).
+/// Auto-registro con aprobación de un admin — ver docs/seguridad-auth.md.
+model User {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  name         String
+  passwordHash String     @map("password_hash")
+  role         Role       @default(operario)
+  status       UserStatus @default(pending)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  approvedAt   DateTime?  @map("approved_at")
+
+  @@map("users")
+}

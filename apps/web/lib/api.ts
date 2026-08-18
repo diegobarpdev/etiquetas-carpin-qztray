@@ -112,24 +112,7 @@ export async function apiDownloadPdfWithFilename(
   return { blob, filename: match?.[1] || fallbackFilename };
 }
 
-// ——— Acceso a la app (PIN general, separado del admin de impresoras) ———
-
-export function apiAppSession() {
-  return adminApi<{ unlocked: boolean }>('/api/app/session');
-}
-
-export function apiAppUnlock(pin: string) {
-  return adminApi('/api/app/unlock', {
-    method: 'POST',
-    body: JSON.stringify({ pin }),
-  });
-}
-
-export function apiAppLock() {
-  return adminApi('/api/app/lock', { method: 'POST', body: '{}' });
-}
-
-// ——— Admin de impresoras ———
+// ——— Autenticación real por usuario (email + clave) ———
 
 async function adminApi<T = any>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
@@ -144,20 +127,74 @@ async function adminApi<T = any>(path: string, options: RequestInit = {}): Promi
   return payload;
 }
 
-export function apiAdminSession() {
-  return adminApi<{ unlocked: boolean }>('/api/admin/printers/session');
+export interface CurrentUser {
+  id: number;
+  email: string;
+  name: string;
+  role: 'operario' | 'admin';
 }
 
-export function apiAdminUnlock(pin: string) {
-  return adminApi('/api/admin/printers/unlock', {
+export function apiAuthMe() {
+  return adminApi<{ user: CurrentUser }>('/api/auth/me');
+}
+
+export function apiAuthLogin(email: string, password: string) {
+  return adminApi<{ user: CurrentUser }>('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ pin }),
+    body: JSON.stringify({ email, password }),
   });
 }
 
-export function apiAdminLock() {
-  return adminApi('/api/admin/printers/lock', { method: 'POST', body: '{}' });
+export function apiAuthRegister(name: string, email: string, password: string) {
+  return adminApi<{ status: string }>('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ name, email, password }),
+  });
 }
+
+export function apiAuthLogout() {
+  return adminApi('/api/auth/logout', { method: 'POST', body: '{}' });
+}
+
+// ——— Admin: gestión de usuarios (aprobar/rechazar/rol/reset clave) ———
+
+export interface AdminUserRow {
+  id: number;
+  email: string;
+  name: string;
+  role: 'operario' | 'admin';
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  approvedAt: string | null;
+}
+
+export function apiAdminListUsers() {
+  return adminApi<{ users: AdminUserRow[] }>('/api/admin/users');
+}
+
+export function apiAdminApproveUser(id: number) {
+  return adminApi(`/api/admin/users/${id}/approve`, { method: 'POST', body: '{}' });
+}
+
+export function apiAdminRejectUser(id: number) {
+  return adminApi(`/api/admin/users/${id}/reject`, { method: 'POST', body: '{}' });
+}
+
+export function apiAdminSetUserRole(id: number, role: 'operario' | 'admin') {
+  return adminApi(`/api/admin/users/${id}/role`, {
+    method: 'POST',
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function apiAdminResetUserPassword(id: number, newPassword: string) {
+  return adminApi(`/api/admin/users/${id}/reset-password`, {
+    method: 'POST',
+    body: JSON.stringify({ newPassword }),
+  });
+}
+
+// ——— Admin de impresoras ———
 
 export function apiAdminConfig() {
   return adminApi<{ stations: AdminStation[] }>('/api/admin/printers/config');
