@@ -74,3 +74,15 @@ Lo que está cubierto hoy:
 - Rate-limit (20/min por IP) en los 6 endpoints que renderizan PDF con
   Puppeteer — evita un DoS trivial por loop descontrolado.
 - CORS con allowlist de orígenes (no refleja cualquier origen).
+
+**¿Se olvidó un PIN, hay que rotarlo, o alguien se fue de la empresa y
+hay que cortar el acceso ya?** Ver
+[`docs/seguridad-auth.md`](docs/seguridad-auth.md) — ahí está el
+procedimiento para cada caso. Resumen rápido:
+- PIN olvidado: mirar el valor real en `.env` (`APP_ACCESS_PIN`/
+  `PRINT_ADMIN_PIN`) y pasarlo de nuevo — no hace falta reiniciar nada.
+- Rotar un PIN: cambiarlo en `.env` + reiniciar la API. Las sesiones ya
+  abiertas siguen vivas hasta que expiren (no las corta el cambio de PIN).
+- Cortar todo acceso ya (ej. alguien se va de la empresa): rotar
+  `INTERNAL_API_KEY` (invalida TODAS las sesiones de una) — detalle en
+  el doc.
