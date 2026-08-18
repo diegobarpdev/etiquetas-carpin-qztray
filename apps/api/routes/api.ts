@@ -535,7 +535,7 @@ router.get('/orders/:id/labels/pdf', renderRateLimit, async (req: Request, res: 
   }
 });
 
-router.post('/orders/:id/labels/generate', async (req: Request, res: Response) => {
+router.post('/orders/:id/labels/generate', renderRateLimit, async (req: Request, res: Response) => {
   try {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
