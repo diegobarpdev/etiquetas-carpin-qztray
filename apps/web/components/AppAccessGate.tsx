@@ -193,7 +193,7 @@ function RegisteredPending({ onBackToLogin }: { onBackToLogin: () => void }) {
 }
 
 function ForceChangePasswordForm() {
-  const { refreshMe } = useAuth();
+  const { refreshMe, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
@@ -257,6 +257,13 @@ function ForceChangePasswordForm() {
       >
         Cambiar clave y entrar
       </Button>
+      <button
+        type="button"
+        className="text-sm text-muted-foreground underline-offset-2 hover:underline"
+        onClick={() => void logout()}
+      >
+        Cerrar sesión
+      </button>
     </>
   );
 }
