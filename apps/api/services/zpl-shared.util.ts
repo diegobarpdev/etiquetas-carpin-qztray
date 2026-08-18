@@ -74,6 +74,30 @@ export function scaleRgbaNearest(
   return out;
 }
 
+/** Rota 90° antihorario (CSS rotate(-90deg)). Para bitmaps (^GFA) que no tienen parámetro de orientación propio. */
+export function rotateRgba90Ccw(
+  src: Buffer,
+  sw: number,
+  sh: number,
+): { data: Buffer; width: number; height: number } {
+  const dw = sh;
+  const dh = sw;
+  const out = Buffer.alloc(dw * dh * 4);
+  for (let y = 0; y < sh; y += 1) {
+    for (let x = 0; x < sw; x += 1) {
+      const si = (y * sw + x) * 4;
+      const dx = y;
+      const dy = sw - 1 - x;
+      const di = (dy * dw + dx) * 4;
+      out[di] = src[si];
+      out[di + 1] = src[si + 1];
+      out[di + 2] = src[si + 2];
+      out[di + 3] = src[si + 3];
+    }
+  }
+  return { data: out, width: dw, height: dh };
+}
+
 /** CRC-16/XMODEM requerido por ZB64: init 0x0000. */
 export function crc16Ccitt(buf: Buffer): number {
   let crc = 0x0000;

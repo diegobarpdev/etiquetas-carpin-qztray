@@ -59,12 +59,12 @@ describe('buildNativeLabelZpl', () => {
     expect(() => buildNativeLabelZpl(label, OPTS)).toThrow(/sin generador ZPL nativo/);
   });
 
-  it('produce un bloque ^XA...^XZ autocontenido de 150x100mm a 203dpi', () => {
+  it('produce un bloque ^XA...^XZ autocontenido de 100x150mm a 203dpi (rotado -90° para el cabezal ~104mm)', () => {
     const result = buildNativeLabelZpl(baseLabel(), OPTS);
-    expect(result.widthMm).toBe(150);
-    expect(result.heightMm).toBe(100);
-    expect(result.widthDots).toBe(1199); // round(150/25.4*203)
-    expect(result.heightDots).toBe(799);
+    expect(result.widthMm).toBe(100);
+    expect(result.heightMm).toBe(150);
+    expect(result.widthDots).toBe(799); // round(100/25.4*203)
+    expect(result.heightDots).toBe(1199); // round(150/25.4*203)
     expect(result.zpl.startsWith('^XA')).toBe(true);
     expect(result.zpl.trim().endsWith('^XZ')).toBe(true);
     expect(result.zpl).toContain('^CI28'); // UTF-8, por acentos
@@ -73,7 +73,7 @@ describe('buildNativeLabelZpl', () => {
   it('incluye los 3 QR (sku/ref/lote) cuando showInternalRefQr=true', () => {
     const label = baseLabel({ showInternalRefQr: true });
     const { zpl } = buildNativeLabelZpl(label, OPTS);
-    const qrCount = (zpl.match(/\^BQN,2,/g) || []).length;
+    const qrCount = (zpl.match(/\^BQB,2,/g) || []).length;
     expect(qrCount).toBe(3);
     expect(zpl).toContain(`^FDQA,${label.qrSku}^FS`);
     expect(zpl).toContain(`^FDQA,${label.qrInternalRef}^FS`);
@@ -83,7 +83,7 @@ describe('buildNativeLabelZpl', () => {
   it('omite el QR de referencia interna cuando showInternalRefQr=false', () => {
     const label = baseLabel({ showInternalRefQr: false });
     const { zpl } = buildNativeLabelZpl(label, OPTS);
-    const qrCount = (zpl.match(/\^BQN,2,/g) || []).length;
+    const qrCount = (zpl.match(/\^BQB,2,/g) || []).length;
     expect(qrCount).toBe(2);
     expect(zpl).not.toContain(`^FDQA,${label.qrInternalRef}^FS`);
   });
@@ -107,12 +107,12 @@ describe('buildNativeLabelZpl', () => {
     expect(v1.zpl).not.toContain('BULTO:');
   });
 
-  it('las líneas de instrucciones no se salen del label (< 100mm de alto)', () => {
+  it('las líneas de instrucciones no se salen del label físico (rotado)', () => {
     const manyLines = 'UNO\nDOS\nTRES\nCUATRO\nCINCO\nSEIS';
     const label = baseLabel({ templateCode: 'colchon-v2', finishInstructions: manyLines });
-    const { zpl } = buildNativeLabelZpl(label, OPTS);
-    const yPositions = [...zpl.matchAll(/\^FO\d+,(\d+)\^A0N/g)].map((m) => Number(m[1]));
-    expect(Math.max(...yPositions)).toBeLessThan(799);
+    const result = buildNativeLabelZpl(label, OPTS);
+    const yPositions = [...result.zpl.matchAll(/\^FO\d+,(\d+)\^A0B/g)].map((m) => Number(m[1]));
+    expect(Math.max(...yPositions)).toBeLessThan(result.heightDots);
   });
 
   it('sanea ^ y ~ en texto libre para no romper el stream ZPL', () => {

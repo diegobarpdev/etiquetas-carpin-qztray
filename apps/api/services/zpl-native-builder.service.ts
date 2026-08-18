@@ -8,6 +8,7 @@ import {
   buildHardwareLines,
   encodeBitmapZ64,
   scaleRgbaNearest,
+  rotateRgba90Ccw,
   HardwareOptions,
   PngToZplResult,
 } from './zpl-shared.util';
@@ -27,16 +28,25 @@ export function supportsNativeZpl(templateCode: string): boolean {
 const LOGO_PATH = join(__dirname, '..', 'assets', 'colineallogo.png');
 const logoFieldCache = new Map<number, { field: string; widthDots: number; heightDots: number }>();
 
-/** PNG (archivo fijo, no depende de datos del label) → campo ^GFA reusable. */
+/**
+ * PNG (archivo fijo, no depende de datos del label) → campo ^GFA reusable.
+ * ^GFA no tiene parámetro de orientación (a diferencia de ^A0/^BQ), así que
+ * hay que rotar los píxeles -90° a mano para que quede igual que el resto
+ * del label (ver DESIGN_WIDTH_MM más abajo).
+ */
 function getLogoGfaField(dpi: number, widthMm: number, heightMm: number) {
   const cached = logoFieldCache.get(dpi);
   if (cached) return cached;
   if (!existsSync(LOGO_PATH)) return null;
 
   const parsed = PNG.sync.read(readFileSync(LOGO_PATH));
-  const targetW = mmToDots(widthMm, dpi);
-  const targetH = mmToDots(heightMm, dpi);
-  const rgba = scaleRgbaNearest(parsed.data, parsed.width, parsed.height, targetW, targetH);
+  const scaledW = mmToDots(widthMm, dpi);
+  const scaledH = mmToDots(heightMm, dpi);
+  const scaled = scaleRgbaNearest(parsed.data, parsed.width, parsed.height, scaledW, scaledH);
+  const rotated = rotateRgba90Ccw(scaled, scaledW, scaledH);
+  const rgba = rotated.data;
+  const targetW = rotated.width;
+  const targetH = rotated.height;
 
   const bytesPerRow = Math.ceil(targetW / 8);
   const totalBytes = bytesPerRow * targetH;
@@ -72,6 +82,21 @@ function ptToDots(pt: number, dpi: number): number {
   return Math.max(1, Math.round((pt / 72) * dpi));
 }
 
+/**
+ * El cabezal Zebra real (~104mm, ver MAX_PRINT_WIDTH_MM en
+ * zpl-generator.service.ts) es más angosto que el diseño 150×100mm de estas
+ * 3 plantillas — el path legacy siempre rota el bitmap final -90° (CCW)
+ * para que el lado de 100mm quede a lo ancho del cabezal. Acá se replica lo
+ * mismo por comando ZPL (^A0/^BQ orientación "B" = 270° horario = -90°) en
+ * vez de rotar píxeles — mismo resultado físico, sin rasterizar.
+ */
+const DESIGN_WIDTH_MM = 150;
+
+/** Ancla (x,y) de una caja del diseño original → ancla en el lienzo rotado -90°. */
+function rotateAnchor(xMm: number, yMm: number, wMm: number, hMm: number) {
+  return { xMm: yMm, yMm: DESIGN_WIDTH_MM - xMm - wMm };
+}
+
 interface FieldOpts {
   dpi: number;
   xMm: number;
@@ -80,12 +105,13 @@ interface FieldOpts {
   text: string;
 }
 
-/** Campo de una línea, ^A0 (fuente vectorial escalable). */
+/** Campo de una línea, ^A0 (fuente vectorial escalable), orientación B (rotada). */
 function textField({ dpi, xMm, yMm, fontPt, text }: FieldOpts): string {
   const h = ptToDots(fontPt, dpi);
-  const x = mmToDots(xMm, dpi);
-  const y = mmToDots(yMm, dpi);
-  return `^FO${x},${y}^A0N,${h},${h}^FD${zplText(text)}^FS`;
+  const anchor = rotateAnchor(xMm, yMm, 0, 0);
+  const x = mmToDots(anchor.xMm, dpi);
+  const y = mmToDots(anchor.yMm, dpi);
+  return `^FO${x},${y}^A0B,${h},${h}^FD${zplText(text)}^FS`;
 }
 
 interface BlockFieldOpts extends FieldOpts {
@@ -94,7 +120,11 @@ interface BlockFieldOpts extends FieldOpts {
   justify?: 'L' | 'C' | 'R';
 }
 
-/** Campo con reflow (^FB) para texto de largo variable (título, nombre corto). */
+/**
+ * Campo con reflow (^FB) para texto de largo variable (título, nombre
+ * corto). El ancho de ^FB es local al campo (a lo largo de su propia
+ * dirección de lectura, ya rotada) — no se recalcula, solo el ancla.
+ */
 function blockTextField({
   dpi,
   xMm,
@@ -106,26 +136,32 @@ function blockTextField({
   text,
 }: BlockFieldOpts): string {
   const h = ptToDots(fontPt, dpi);
-  const x = mmToDots(xMm, dpi);
-  const y = mmToDots(yMm, dpi);
+  const lineHeightMm = (fontPt / 72) * 25.4 * 1.2;
+  const anchor = rotateAnchor(xMm, yMm, widthMm, lineHeightMm * maxLines);
+  const x = mmToDots(anchor.xMm, dpi);
+  const y = mmToDots(anchor.yMm, dpi);
   const w = mmToDots(widthMm, dpi);
-  return `^FO${x},${y}^A0N,${h},${h}^FB${w},${maxLines},0,${justify},0^FD${zplText(text)}^FS`;
+  return `^FO${x},${y}^A0B,${h},${h}^FB${w},${maxLines},0,${justify},0^FD${zplText(text)}^FS`;
 }
 
 function graphicBox(dpi: number, xMm: number, yMm: number, widthMm: number, heightMm: number, thicknessMm = 0.35): string {
-  const x = mmToDots(xMm, dpi);
-  const y = mmToDots(yMm, dpi);
-  const w = mmToDots(widthMm, dpi);
-  const h = mmToDots(Math.max(heightMm, 0.01), dpi);
+  const safeHeightMm = Math.max(heightMm, 0.01);
+  const anchor = rotateAnchor(xMm, yMm, widthMm, safeHeightMm);
+  const x = mmToDots(anchor.xMm, dpi);
+  const y = mmToDots(anchor.yMm, dpi);
+  // Rotado -90°: el ancho original pasa a ser alto y viceversa.
+  const w = mmToDots(safeHeightMm, dpi);
+  const h = mmToDots(widthMm, dpi);
   const t = mmToDots(thicknessMm, dpi);
   return `^FO${x},${y}^GB${w},${h},${t}^FS`;
 }
 
-/** ^BQ (QR Code, Model 2). "QA," = modo automático + corrección M por defecto. */
+/** ^BQ (QR Code, Model 2), orientación B (rotada). "QA," = modo automático + corrección M por defecto. */
 function qrField(dpi: number, xMm: number, yMm: number, sizeMm: number, magnification: number, data: string): string {
-  const x = mmToDots(xMm, dpi);
-  const y = mmToDots(yMm, dpi);
-  return `^FO${x},${y}^BQN,2,${magnification}^FDQA,${zplText(data)}^FS`;
+  const anchor = rotateAnchor(xMm, yMm, sizeMm, sizeMm);
+  const x = mmToDots(anchor.xMm, dpi);
+  const y = mmToDots(anchor.yMm, dpi);
+  return `^FO${x},${y}^BQB,2,${magnification}^FDQA,${zplText(data)}^FS`;
 }
 
 interface DimensionsTableOpts {
@@ -172,10 +208,16 @@ export function buildNativeLabelZpl(label: LabelData, options: NativeZplOptions)
   }
 
   const dpi = options.dpi;
+  // Frame de diseño (sin rotar) — todas las posiciones de abajo se calculan
+  // acá, igual que el HTML/CSS original. La rotación -90° a físico
+  // 100×150mm pasa dentro de textField/blockTextField/qrField/graphicBox.
   const widthMm = 150;
   const heightMm = 100;
-  const widthDots = mmToDots(widthMm, dpi);
-  const heightDots = mmToDots(heightMm, dpi);
+  // Dimensiones físicas reales que ve el cabezal, ya rotadas.
+  const physicalWidthMm = heightMm;
+  const physicalHeightMm = widthMm;
+  const widthDots = mmToDots(physicalWidthMm, dpi);
+  const heightDots = mmToDots(physicalHeightMm, dpi);
 
   const twoQr = !label.showInternalRefQr;
   const lotForQr = String(label.qrLotNumber || '').trim() || String(label.orderName || '').trim();
@@ -188,11 +230,12 @@ export function buildNativeLabelZpl(label: LabelData, options: NativeZplOptions)
   // Marco.
   fields.push(graphicBox(dpi, 4, 4, widthMm - 8, heightMm - 8, 0.35));
 
-  // Logo.
+  // Logo (bitmap ^GFA ya rotado -90° dentro de getLogoGfaField).
   const logo = getLogoGfaField(dpi, 14, 14);
   if (logo) {
-    const x = mmToDots(6.5, dpi);
-    const y = mmToDots(5.5, dpi);
+    const anchor = rotateAnchor(6.5, 5.5, 14, 14);
+    const x = mmToDots(anchor.xMm, dpi);
+    const y = mmToDots(anchor.yMm, dpi);
     fields.push(`^FO${x},${y}${logo.field}^FS`);
   }
 
@@ -343,5 +386,5 @@ export function buildNativeLabelZpl(label: LabelData, options: NativeZplOptions)
     '',
   ].join('\r\n');
 
-  return { zpl, widthDots, heightDots, widthMm, heightMm };
+  return { zpl, widthDots, heightDots, widthMm: physicalWidthMm, heightMm: physicalHeightMm };
 }
