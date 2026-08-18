@@ -21,7 +21,7 @@
     "mupdf": "^1.28.0",
     "pg": "^8.22.0",
     "pngjs": "^7.0.0",
-    "puppeteer": "^24.10.0",
+    "puppeteer": "^25.8.0",
     "qrcode": "^1.5.4",
     "selfsigned": "^5.5.0"
   },
