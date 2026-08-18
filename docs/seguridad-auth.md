@@ -75,8 +75,8 @@ BOOTSTRAP_ADMIN_PASSWORD=algo-largo-y-random
 
 Si ese email **no existe todavía**, se crea como admin ya aprobado. Si
 ya existe, no hace nada (no resetea la clave en cada restart, por si ya
-se cambió a mano). Usalo una vez para entrar y aprobar/promover al
-resto desde la app; después podés dejar las env vars puestas sin
+se cambió a mano). Úsalo una vez para entrar y aprobar/promover al
+resto desde la app; después puedes dejar las env vars puestas sin
 problema, o borrarlas.
 
 ## Cómo funciona la sesión (para quien toque el código)

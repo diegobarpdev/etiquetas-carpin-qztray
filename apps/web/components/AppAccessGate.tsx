@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import { Lock, MailCheck } from 'lucide-react';
+import { KeyRound, Lock, MailCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { apiAuthRegister } from '../lib/api';
+import { apiAuthChangePassword, apiAuthRegister } from '../lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 
 type View = 'login' | 'register' | 'registered-pending';
@@ -42,7 +43,7 @@ function LoginForm({ onSwitchToRegister }: { onSwitchToRegister: () => void }) {
       <div className="flex flex-col items-center gap-2 text-center">
         <Lock className="h-8 w-8 text-slate-400" aria-hidden="true" />
         <h1 className="m-0 text-lg font-semibold">Etiquetas Colineal</h1>
-        <p className="m-0 text-sm text-muted-foreground">Ingresá con tu cuenta.</p>
+        <p className="m-0 text-sm text-muted-foreground">Ingresa con tu cuenta.</p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="login-email">Email</Label>
@@ -60,8 +61,7 @@ function LoginForm({ onSwitchToRegister }: { onSwitchToRegister: () => void }) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="login-password">Clave</Label>
-        <Input
-          type="password"
+        <PasswordInput
           id="login-password"
           autoComplete="current-password"
           value={password}
@@ -84,7 +84,7 @@ function LoginForm({ onSwitchToRegister }: { onSwitchToRegister: () => void }) {
         className="text-sm text-muted-foreground underline-offset-2 hover:underline"
         onClick={onSwitchToRegister}
       >
-        ¿No tenés cuenta? Registrate
+        ¿No tienes cuenta? Regístrate
       </button>
     </>
   );
@@ -141,8 +141,7 @@ function RegisterForm({
       </div>
       <div className="space-y-2">
         <Label htmlFor="register-password">Clave</Label>
-        <Input
-          type="password"
+        <PasswordInput
           id="register-password"
           autoComplete="new-password"
           value={password}
@@ -183,7 +182,7 @@ function RegisteredPending({ onBackToLogin }: { onBackToLogin: () => void }) {
         <MailCheck className="h-8 w-8 text-emerald-500" aria-hidden="true" />
         <h1 className="m-0 text-lg font-semibold">Cuenta creada</h1>
         <p className="m-0 text-sm text-muted-foreground">
-          Esperá a que un admin apruebe tu cuenta para poder entrar.
+          Espera a que un admin apruebe tu cuenta para poder entrar.
         </p>
       </div>
       <Button type="button" onClick={onBackToLogin}>
@@ -193,8 +192,77 @@ function RegisteredPending({ onBackToLogin }: { onBackToLogin: () => void }) {
   );
 }
 
+function ForceChangePasswordForm() {
+  const { refreshMe } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit() {
+    setError('');
+    setSubmitting(true);
+    try {
+      await apiAuthChangePassword(currentPassword, newPassword);
+      await refreshMe();
+    } catch (err: any) {
+      setError(err.message || 'Error cambiando la clave');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="flex flex-col items-center gap-2 text-center">
+        <KeyRound className="h-8 w-8 text-amber-500" aria-hidden="true" />
+        <h1 className="m-0 text-lg font-semibold">Cambia tu clave</h1>
+        <p className="m-0 text-sm text-muted-foreground">
+          Un admin reseteó tu clave. Por seguridad, tienes que elegir una nueva antes de
+          seguir.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="force-change-current">Clave actual (la que te dieron)</Label>
+        <PasswordInput
+          id="force-change-current"
+          autoComplete="current-password"
+          autoFocus
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="force-change-new">Clave nueva</Label>
+        <PasswordInput
+          id="force-change-new"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void submit();
+          }}
+        />
+        <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
+        {error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
+      <Button
+        type="button"
+        disabled={submitting || !currentPassword || newPassword.length < 8}
+        onClick={() => void submit()}
+      >
+        Cambiar clave y entrar
+      </Button>
+    </>
+  );
+}
+
 export function AppAccessGate({ children }: { children: ReactNode }) {
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const [view, setView] = useState<View>('login');
 
   if (status === 'checking') return null;
@@ -210,6 +278,14 @@ export function AppAccessGate({ children }: { children: ReactNode }) {
           />
         )}
         {view === 'registered-pending' && <RegisteredPending onBackToLogin={() => setView('login')} />}
+      </Shell>
+    );
+  }
+
+  if (user?.mustChangePassword) {
+    return (
+      <Shell>
+        <ForceChangePasswordForm />
       </Shell>
     );
   }

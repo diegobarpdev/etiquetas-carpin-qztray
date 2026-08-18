@@ -9,7 +9,7 @@ import {
 } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Badge } from '@/components/ui/badge';
 
 const STATUS_LABEL: Record<AdminUserRow['status'], string> = {
@@ -108,7 +108,7 @@ export function UsersAdminPanel({ active }: { active: boolean }) {
             </Badge>
             <strong className="font-semibold">{row.name}</strong>
             <span className="text-xs text-muted-foreground">{row.email}</span>
-            {isSelf ? <span className="text-xs text-muted-foreground">(vos)</span> : null}
+            {isSelf ? <span className="text-xs text-muted-foreground">(tú)</span> : null}
           </div>
           <div className="flex flex-shrink-0 flex-wrap gap-1.5">
             {row.status === 'pending' ? (
@@ -154,8 +154,7 @@ export function UsersAdminPanel({ active }: { active: boolean }) {
         </div>
         {resettingId === row.id ? (
           <div className="mt-2 flex items-center gap-2 border-t border-slate-100 pt-2">
-            <Input
-              type="password"
+            <PasswordInput
               placeholder="Clave nueva (mín. 8 caracteres)"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -169,6 +168,11 @@ export function UsersAdminPanel({ active }: { active: boolean }) {
               Guardar clave
             </Button>
           </div>
+        ) : null}
+        {row.mustChangePassword ? (
+          <p className="m-0 mt-1.5 text-xs font-medium text-amber-600">
+            Pendiente: todavía no cambió la clave que le resetearon.
+          </p>
         ) : null}
       </section>
     );

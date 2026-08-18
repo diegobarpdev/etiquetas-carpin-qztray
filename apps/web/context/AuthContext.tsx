@@ -8,6 +8,9 @@ interface AuthContextValue {
   user: CurrentUser | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Vuelve a pedir /auth/me — usar después de cambiar la clave para que
+   * mustChangePassword se actualice sin tener que recargar la página. */
+  refreshMe: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -40,8 +43,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('needs-auth');
   }, []);
 
+  const refreshMe = useCallback(async () => {
+    const res = await apiAuthMe();
+    setUser(res.user);
+    setStatus('authenticated');
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ status, user, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ status, user, login, logout, refreshMe }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

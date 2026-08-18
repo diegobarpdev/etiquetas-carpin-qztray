@@ -110,3 +110,20 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
     next();
   });
 }
+
+/**
+ * Bloquea todo /api/* salvo /api/auth/* (login/logout/me/change-password)
+ * mientras mustChangePassword esté en true — así un admin reseteando la
+ * clave de alguien de verdad lo obliga a cambiarla, no es solo una
+ * sugerencia en el frontend que se puede saltar pegándole directo a la API.
+ */
+export function blockIfMustChangePassword(req: Request, res: Response, next: NextFunction): void {
+  if (req.user?.mustChangePassword) {
+    res.status(403).json({
+      error: 'Tienes que cambiar tu clave antes de continuar',
+      code: 'MUST_CHANGE_PASSWORD',
+    });
+    return;
+  }
+  next();
+}

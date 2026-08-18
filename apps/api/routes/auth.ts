@@ -19,8 +19,20 @@ const registerRateLimit = createRateLimiter({
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function publicUser(user: { id: number; email: string; name: string; role: string }) {
-  return { id: user.id, email: user.email, name: user.name, role: user.role };
+function publicUser(user: {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  mustChangePassword: boolean;
+}) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    mustChangePassword: user.mustChangePassword,
+  };
 }
 
 router.post('/auth/register', registerRateLimit, async (req: Request, res: Response) => {
@@ -103,6 +115,35 @@ router.post('/auth/logout', (_req: Request, res: Response) => {
 
 router.get('/auth/me', requireLogin, (req: Request, res: Response) => {
   res.json({ user: publicUser(req.user!) });
+});
+
+/**
+ * Sin `blockIfMustChangePassword` de por medio (está montado en index.ts
+ * antes del apiRouter, este router va antes de esa capa) — tiene que ser
+ * alcanzable justo cuando mustChangePassword es true, si no nadie podría
+ * salir de ese estado.
+ */
+router.post('/auth/change-password', requireLogin, async (req: Request, res: Response) => {
+  try {
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: 'La clave nueva debe tener al menos 8 caracteres' });
+      return;
+    }
+    if (!verifyPassword(currentPassword, req.user!.passwordHash)) {
+      res.status(401).json({ error: 'Clave actual incorrecta' });
+      return;
+    }
+    const updated = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { passwordHash: hashPassword(newPassword), mustChangePassword: false },
+    });
+    res.json({ ok: true, user: publicUser(updated) });
+  } catch (error) {
+    console.error('[auth/change-password]', error);
+    res.status(500).json({ error: 'Error cambiando la clave' });
+  }
 });
 
 export default router;

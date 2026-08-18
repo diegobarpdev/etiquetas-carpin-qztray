@@ -123,15 +123,18 @@ enum UserStatus {
 /// Cuentas reales por persona (reemplaza APP_ACCESS_PIN/PRINT_ADMIN_PIN).
 /// Auto-registro con aprobación de un admin — ver docs/seguridad-auth.md.
 model User {
-  id           Int        @id @default(autoincrement())
-  email        String     @unique
-  name         String
-  passwordHash String     @map("password_hash")
-  role         Role       @default(operario)
-  status       UserStatus @default(pending)
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
-  approvedAt   DateTime?  @map("approved_at")
+  id                 Int        @id @default(autoincrement())
+  email              String     @unique
+  name               String
+  passwordHash       String     @map("password_hash")
+  role               Role       @default(operario)
+  status             UserStatus @default(pending)
+  /// true después de que un admin le resetea la clave — tiene que
+  /// cambiarla él mismo antes de poder usar el resto de la app.
+  mustChangePassword Boolean    @default(false) @map("must_change_password")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+  approvedAt         DateTime?  @map("approved_at")
 
   @@map("users")
 }

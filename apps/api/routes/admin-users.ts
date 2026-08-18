@@ -24,6 +24,7 @@ function publicUser(user: {
   name: string;
   role: string;
   status: string;
+  mustChangePassword: boolean;
   createdAt: Date;
   approvedAt: Date | null;
 }) {
@@ -33,6 +34,7 @@ function publicUser(user: {
     name: user.name,
     role: user.role,
     status: user.status,
+    mustChangePassword: user.mustChangePassword,
     createdAt: user.createdAt,
     approvedAt: user.approvedAt,
   };
@@ -113,7 +115,7 @@ router.post(
     }
     const user = await prisma.user.update({
       where: { id },
-      data: { passwordHash: hashPassword(newPassword) },
+      data: { passwordHash: hashPassword(newPassword), mustChangePassword: true },
     });
     res.json({ ok: true, user: publicUser(user) });
   }),

@@ -8,7 +8,7 @@ import express from 'express';
 import { config as loadEnv } from 'dotenv';
 import apiRouter from './routes/api';
 import authRouter from './routes/auth';
-import { requireLogin } from './lib/user-session';
+import { requireLogin, blockIfMustChangePassword } from './lib/user-session';
 import { ensureBootstrapAdmin } from './services/bootstrap-admin.service';
 import { closeBrowser } from './services/pdf-generator.service';
 import { initPrintersConfig } from './services/printers-config.service';
@@ -118,6 +118,7 @@ async function main() {
   // nunca). El rol admin se revisa por ruta más adentro (requireAdmin).
   app.use('/api', authRouter);
   app.use('/api', requireLogin);
+  app.use('/api', blockIfMustChangePassword);
   app.use('/api', apiRouter);
 
   const server = app.listen(API_PORT, HOST, () => {

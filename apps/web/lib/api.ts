@@ -132,6 +132,7 @@ export interface CurrentUser {
   email: string;
   name: string;
   role: 'operario' | 'admin';
+  mustChangePassword: boolean;
 }
 
 export function apiAuthMe() {
@@ -156,6 +157,13 @@ export function apiAuthLogout() {
   return adminApi('/api/auth/logout', { method: 'POST', body: '{}' });
 }
 
+export function apiAuthChangePassword(currentPassword: string, newPassword: string) {
+  return adminApi<{ user: CurrentUser }>('/api/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
 // ——— Admin: gestión de usuarios (aprobar/rechazar/rol/reset clave) ———
 
 export interface AdminUserRow {
@@ -164,6 +172,7 @@ export interface AdminUserRow {
   name: string;
   role: 'operario' | 'admin';
   status: 'pending' | 'approved' | 'rejected';
+  mustChangePassword: boolean;
   createdAt: string;
   approvedAt: string | null;
 }
