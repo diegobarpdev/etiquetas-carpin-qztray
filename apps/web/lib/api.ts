@@ -112,6 +112,23 @@ export async function apiDownloadPdfWithFilename(
   return { blob, filename: match?.[1] || fallbackFilename };
 }
 
+// ——— Acceso a la app (PIN general, separado del admin de impresoras) ———
+
+export function apiAppSession() {
+  return adminApi<{ unlocked: boolean }>('/api/app/session');
+}
+
+export function apiAppUnlock(pin: string) {
+  return adminApi('/api/app/unlock', {
+    method: 'POST',
+    body: JSON.stringify({ pin }),
+  });
+}
+
+export function apiAppLock() {
+  return adminApi('/api/app/lock', { method: 'POST', body: '{}' });
+}
+
 // ——— Admin de impresoras ———
 
 async function adminApi<T = any>(path: string, options: RequestInit = {}): Promise<T> {

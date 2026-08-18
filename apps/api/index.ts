@@ -7,6 +7,8 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import { config as loadEnv } from 'dotenv';
 import apiRouter from './routes/api';
+import appAccessRouter from './routes/app-access';
+import { appAccessAuth } from './services/app-access-auth.service';
 import { closeBrowser } from './services/pdf-generator.service';
 import { initPrintersConfig } from './services/printers-config.service';
 import { closeOdooPool, isOdooEnabled, odooHealth } from './lib/odoo';
@@ -32,6 +34,14 @@ if (!INTERNAL_API_KEY) {
   console.error(
     '[FATAL] Falta INTERNAL_API_KEY en .env — no hay default por seguridad. ' +
       'La API no acepta pedidos directos sin pasar por el proxy del front.',
+  );
+  process.exit(1);
+}
+
+if (!process.env.APP_ACCESS_PIN || !process.env.APP_ACCESS_PIN.trim()) {
+  console.error(
+    '[FATAL] Falta APP_ACCESS_PIN en .env — no hay default por seguridad. ' +
+      'Es el PIN que pide la app entera antes de buscar/imprimir.',
   );
   process.exit(1);
 }
@@ -108,6 +118,12 @@ async function main() {
     }
     next();
   });
+  // Rutas de desbloqueo/estado de sesión: sin gate (si no, nadie podría
+  // desbloquearse nunca).
+  app.use('/api', appAccessRouter);
+  // PIN de acceso general a la app (búsqueda/impresión) — separado del PIN
+  // de admin de impresoras, que sigue siendo un segundo gate más adentro.
+  app.use('/api', appAccessAuth.requireSession);
   app.use('/api', apiRouter);
 
   const server = app.listen(API_PORT, HOST, () => {

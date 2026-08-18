@@ -43,29 +43,34 @@ apps/web/      UI React (Vite) + servidor estático de producción (server.ts)
 apps/api/      API Express + prisma/ + assets/ (logos) + data/ (config/certificado)
 ```
 
-## Supuesto de seguridad: LAN interna confiable
+## Seguridad
 
-**Buscar/leer órdenes de Odoo e imprimir (`/api/orders`, `/api/views/*`,
-`/api/labels/*`, `print-batch`, `print-direct`) no piden login.** Es a
-propósito: el operario camina a la PC, busca la orden e imprime, sin
-loguearse — así lo pidió el dueño del proyecto explícitamente, sabiendo el
-trade-off.
+**Toda la app (`/api/*`, salvo el propio desbloqueo) pide un PIN**
+(`APP_ACCESS_PIN`) la primera vez que se abre en una PC. Al ingresarlo
+queda una cookie `HttpOnly` válida por **30 días** ("confiar en esta PC")
+— el operario no vuelve a loguearse en cada uso, solo cuando esa PC nunca
+entró o pasaron los 30 días. Es un PIN de acceso general, **distinto** del
+PIN de `Configuración → Impresoras` (`PRINT_ADMIN_PIN`, sesión de 30
+minutos): ese segundo PIN sigue protegiendo solo el catálogo de
+impresoras/estaciones, como una capa extra dentro de la app ya
+desbloqueada.
 
-Esto asume que **el server solo es alcanzable desde la red interna de la
-fábrica**, nunca desde internet (sin VPN, sin port-forward, sin túnel tipo
-Cloudflare — hubo uno hace tiempo, se dio de baja, verificado que no corre
-ningún proceso/servicio/tarea programada de eso hoy). Si esto cambia
-alguna vez (exposición externa por cualquier motivo), hay que agregar
-autenticación real a los endpoints de impresión/lectura de datos **antes**
-de exponerlo — el PIN de `Configuración → Impresoras`
-(`PRINT_ADMIN_PIN`) solo protege el catálogo de impresoras, no estos
-endpoints.
+Esto sigue asumiendo que **el server solo es alcanzable desde la red
+interna de la fábrica**, nunca desde internet (sin VPN, sin
+port-forward, sin túnel tipo Cloudflare — hubo uno hace tiempo, se dio de
+baja, verificado que no corre ningún proceso/servicio/tarea programada de
+eso hoy). El PIN de acceso frena a cualquiera que llegue a la red interna
+sin ser operario; no reemplaza mantener esa red cerrada hacia afuera.
 
-Lo que sí está cubierto hoy, independiente de ese supuesto:
+Lo que está cubierto hoy:
+- `APP_ACCESS_PIN`: gate de sesión (30 días) sobre toda la API, con
+  rate-limit y bloqueo progresivo por IP en `/api/app/unlock` igual que el
+  de admin de impresoras.
+- `PRINT_ADMIN_PIN`: segundo gate (sesión de 30 min) solo para
+  `Configuración → Impresoras`.
 - `X-Internal-Key` en `/api/*`: bloquea pedidos directos al puerto de la
   API que no pasen por el proxy del front (ver `apps/web/server.ts` /
-  `apps/web/vite.config.ts`) — cierra el acceso desde la red que no sea
-  vía la webapp, pero no reemplaza autenticación de usuario.
+  `apps/web/vite.config.ts`).
 - Rate-limit (20/min por IP) en los 6 endpoints que renderizan PDF con
   Puppeteer — evita un DoS trivial por loop descontrolado.
 - CORS con allowlist de orígenes (no refleja cualquier origen).
