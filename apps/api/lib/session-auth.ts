@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Sesión sin estado: cookie = `${expiresAt}.${hmac}`. No usa memoria del
- * proceso, así que sobrevive a un reinicio (pm2 restart, deploy) sin forzar
+ * proceso, así que sobrevive a un reinicio (deploy) sin forzar
  * a cada PC a reingresar el PIN. El secreto se mezcla con cookieName para
  * que un token de una instancia no sirva para otra.
  */

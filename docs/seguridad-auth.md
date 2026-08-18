@@ -74,7 +74,7 @@ validar, el server recalcula el HMAC y compara en tiempo constante
 válida.
 
 **Por qué así y no con un `Map` en memoria:** un `Map` se pierde en cada
-reinicio del proceso (deploy, `pm2 restart`, cuelgue). Con una sesión de
+reinicio del proceso (deploy, cuelgue). Con una sesión de
 30 minutos (admin) eso no importa. Pero con una sesión de **30 días**
 (acceso general), perderla en cada reinicio de rutina obligaría a
 reingresar el PIN en todas las PCs cada vez que se sube código — exactamente
@@ -105,8 +105,8 @@ memoria.
 
 1. Editar `.env`, cambiar `APP_ACCESS_PIN=` o `PRINT_ADMIN_PIN=` por el
    valor nuevo.
-2. Reiniciar la API (`pm2 restart etiquetas-api` o el ciclo
-   build/start manual).
+2. Reiniciar la API (cortar el proceso `node`/`npm start` y volver a
+   levantarlo).
 3. **Las sesiones ya abiertas siguen funcionando** hasta que expiren
    (hasta 30 días para `APP_ACCESS_PIN`, hasta 30 min para
    `PRINT_ADMIN_PIN`) — cambiar el PIN no cierra sesiones existentes,

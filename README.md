@@ -25,9 +25,6 @@ El puerto **3001 ya no se usa**.
 npm install
 npm run build
 npm start          # API :3010 + front :3000
-# o con PM2:
-pm2 start ecosystem.config.cjs
-pm2 save
 ```
 
 Desarrollo:
