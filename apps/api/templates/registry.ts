@@ -183,11 +183,7 @@ export function getTemplateFromFiles(code: string) {
   return entry;
 }
 
-export async function renderLabel(
-  label: LabelData,
-  dbHtml?: string,
-  dbCss?: string,
-): Promise<RenderedLabel> {
+export async function renderLabel(label: LabelData): Promise<RenderedLabel> {
   const code = label.templateCode;
   let template: Handlebars.TemplateDelegate;
   let css: string;
@@ -197,11 +193,7 @@ export async function renderLabel(
     template = fromFiles.template;
     css = fromFiles.css;
   } catch {
-    if (!dbHtml) {
-      throw new Error(`Plantilla no encontrada: ${code}`);
-    }
-    template = Handlebars.compile(dbHtml);
-    css = dbCss || '';
+    throw new Error(`Plantilla no encontrada: ${code}`);
   }
 
   const lotNumberDisplay =
