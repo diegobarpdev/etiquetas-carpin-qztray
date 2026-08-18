@@ -71,3 +71,22 @@ Viable, ni tan grande ni tan chico. Si se hace en algún momento: arrancar
 por `bulto-estandar`/`colchon-v1`/`colchon-v2` (ganancia rápida, bajo
 riesgo, casi una sola rutina para los 3), dejar `carpenter-tela` para el
 final.
+
+## Intento (2026-08-18) — abandonado
+
+Se implementó un generador ZPL nativo (`^A0`/`^BQ`/`^GB`) para
+`bulto-estandar`/`colchon-v1`/`colchon-v2` detrás de un flag de prueba
+(`?zplEngine=native`), incluyendo la rotación -90° que ya hacía el path
+legacy para que el diseño 150×100mm entre en el cabezal real (~104mm).
+Verificado exhaustivamente por software: render vía Labelary
+(api.labelary.com) idéntico al diseño original solo rotado, y
+decodificación real de cada QR con `jsQR` confirmando el contenido
+exacto. Pese a eso, **no salió bien en la Zebra física** — no se pudo
+diagnosticar la causa exacta (posible diferencia entre cómo Labelary
+interpreta `^BQ`/`^FB` con orientación rotada y cómo lo hace el
+firmware real del cabezal, o algo del driver/QZ Tray). Se revirtió todo
+el código nativo; Puppeteer sigue siendo el único path de impresión
+para las 3 plantillas. Si se reintenta en el futuro, hay que poder
+iterar directo contra la impresora física desde el primer intento — la
+verificación por software (Labelary) no bastó para detectar el problema
+real.

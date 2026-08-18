@@ -60,7 +60,6 @@ async function buildZplForLabels(
     printMode: 'tear' | 'cutter';
     thermalMethod: 'transfer' | 'direct';
     mediaType: 'gap' | 'continuous';
-    debugZplEngine?: 'native';
   },
 ) {
   if (labels.length === 0) {
@@ -73,19 +72,7 @@ async function buildZplForLabels(
     printMode: opts.printMode,
     thermalMethod: opts.thermalMethod,
     mediaType: opts.mediaType,
-    debugZplEngine: opts.debugZplEngine,
   });
-}
-
-/**
- * Flag de prueba (fase 1 ZPL nativo): ?zplEngine=native o
- * body.debugZplEngine="native" — nadie lo manda salvo que se agregue a
- * propósito (ver apps/web `?zplEngine=native` en la URL). Sin esto el
- * comportamiento de impresión es exactamente el de siempre.
- */
-function resolveDebugZplEngine(req: Request): 'native' | undefined {
-  const raw = req.body?.debugZplEngine ?? req.query?.zplEngine;
-  return raw === 'native' ? 'native' : undefined;
 }
 function resolveTemplateOverride(raw: unknown): string | undefined {
   if (typeof raw !== 'string') return undefined;
@@ -727,7 +714,6 @@ router.post('/labels/print-batch', renderRateLimit, async (req: Request, res: Re
       printMode,
       thermalMethod,
       mediaType,
-      debugZplEngine: resolveDebugZplEngine(req),
     });
 
     const stockMeta = getLabelStockSize(stockSizeCode);
@@ -736,7 +722,6 @@ router.post('/labels/print-batch', renderRateLimit, async (req: Request, res: Re
       mode: 'direct-batch',
       zpl: result.zpl,
       pages: result.pages,
-      nativeLabelsCount: result.nativeLabelsCount,
       orders: orderNames,
       jobs: jobs.length,
       copies,
@@ -858,7 +843,6 @@ router.post('/orders/:id/labels/print-direct', renderRateLimit, async (req: Requ
       printMode,
       thermalMethod,
       mediaType,
-      debugZplEngine: resolveDebugZplEngine(req),
     });
 
     const stockMeta = getLabelStockSize(stockSizeCode);
@@ -867,7 +851,6 @@ router.post('/orders/:id/labels/print-direct', renderRateLimit, async (req: Requ
       mode: 'direct',
       zpl: result.zpl,
       pages: result.pages,
-      nativeLabelsCount: result.nativeLabelsCount,
       copies,
       stockSize: stockSizeCode,
       paperName,
@@ -1085,7 +1068,6 @@ router.post('/manual/labels/print-direct', renderRateLimit, async (req: Request,
       printMode,
       thermalMethod,
       mediaType,
-      debugZplEngine: resolveDebugZplEngine(req),
     });
 
     const stockMeta = getLabelStockSize(stockSizeCode);
@@ -1094,7 +1076,6 @@ router.post('/manual/labels/print-direct', renderRateLimit, async (req: Request,
       mode: 'manual',
       zpl: result.zpl,
       pages: result.pages,
-      nativeLabelsCount: result.nativeLabelsCount,
       copies,
       stockSize: stockSizeCode,
       paperName,
