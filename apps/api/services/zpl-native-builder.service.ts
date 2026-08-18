@@ -10,7 +10,7 @@ import {
   scaleRgbaNearest,
   HardwareOptions,
   PngToZplResult,
-} from './zpl-generator.service';
+} from './zpl-shared.util';
 
 /**
  * Generador ZPL nativo (texto/QR con comandos ^A0/^BQ/^GB, sin Puppeteer ni

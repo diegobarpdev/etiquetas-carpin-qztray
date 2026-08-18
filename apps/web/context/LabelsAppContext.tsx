@@ -1448,6 +1448,11 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
         ? '/api/manual/labels/print-direct'
         : `/api/orders/${ctx.selectedOrderId}/labels/print-direct`;
     const body = useBatch ? buildPrintBatchBody() : buildPrintDirectBody();
+    // Flag de prueba fase 1 ZPL nativo (docs/evaluacion-zpl-nativo.md):
+    // ?zplEngine=native en la URL, nada más — sin esto imprime como siempre.
+    if (new URLSearchParams(window.location.search).get('zplEngine') === 'native') {
+      body.debugZplEngine = 'native';
+    }
     const payload = await apiPostJson<any>(url, body);
     const pages = payload.pages ?? pagesEstimate;
     const size =
@@ -1477,7 +1482,9 @@ export function LabelsAppProvider({ children }: { children: ReactNode }) {
       pages,
       detail: detail || undefined,
     });
-    setPrinterSaveStatus(`Impreso · ${pages} etiq. · ${printerLabel}`);
+    const nativeCount = Number(payload.nativeLabelsCount) || 0;
+    const engineNote = nativeCount > 0 ? ` · ZPL nativo (${nativeCount})` : '';
+    setPrinterSaveStatus(`Impreso · ${pages} etiq. · ${printerLabel}${engineNote}`);
     return payload;
   }
 

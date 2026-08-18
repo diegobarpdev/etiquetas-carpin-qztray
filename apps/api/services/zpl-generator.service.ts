@@ -1,7 +1,21 @@
-import { deflateSync } from 'zlib';
 import { PNG } from 'pngjs';
 import { generateLabelsPdf, BuildLabelsHtmlOptions } from './pdf-generator.service';
 import { LabelData } from '../types';
+import {
+  mmToDots,
+  buildHardwareLines,
+  scaleRgbaNearest,
+  encodeBitmapZ64,
+  PrintMode,
+  ThermalMethod,
+  MediaType,
+  HardwareOptions,
+  PngToZplResult,
+} from './zpl-shared.util';
+import { buildNativeLabelZpl, supportsNativeZpl } from './zpl-native-builder.service';
+
+export type { PrintMode, ThermalMethod, MediaType, HardwareOptions, PngToZplResult };
+export { mmToDots, buildHardwareLines, scaleRgbaNearest, encodeBitmapZ64 };
 
 const DEFAULT_DPI = 203;
 /** Ancho máx. típico cabezal ZT230 200dpi (~4"). */
@@ -44,58 +58,6 @@ async function renderPdfToPngBuffers(pdf: Buffer, dpi: number): Promise<Buffer[]
   return pages;
 }
 
-export function mmToDots(mm: number, dpi: number): number {
-  return Math.max(1, Math.round((Number(mm) / 25.4) * dpi));
-}
-
-/** Líneas ^MM/^MT/^MN/^PR/^MD comunes a cualquier bloque ^XA...^XZ (bitmap o nativo). */
-export function buildHardwareLines(options: {
-  printMode?: PrintMode;
-  thermalMethod?: ThermalMethod;
-  mediaType?: MediaType;
-  printSpeedIps?: number;
-  printDarkness?: number | null;
-}): string[] {
-  const hardware: string[] = [];
-  if (options.printMode) hardware.push(options.printMode === 'cutter' ? '^MMC' : '^MMT');
-  if (options.thermalMethod) hardware.push(options.thermalMethod === 'direct' ? '^MTD' : '^MTT');
-  if (options.mediaType) hardware.push(options.mediaType === 'continuous' ? '^MNN' : '^MNY');
-  const speed = Number(options.printSpeedIps);
-  if (Number.isFinite(speed) && speed >= 2) {
-    hardware.push(`^PR${Math.max(2, Math.min(14, Math.round(speed)))}`);
-  }
-  const md = Number(options.printDarkness);
-  if (Number.isFinite(md)) {
-    hardware.push(`^MD${Math.max(-30, Math.min(30, Math.round(md)))}`);
-  }
-  hardware.push('^JUS');
-  return hardware;
-}
-
-export function scaleRgbaNearest(
-  src: Buffer,
-  sw: number,
-  sh: number,
-  dw: number,
-  dh: number,
-): Buffer {
-  if (sw === dw && sh === dh) return src;
-  const out = Buffer.alloc(dw * dh * 4);
-  for (let y = 0; y < dh; y += 1) {
-    const sy = Math.min(sh - 1, Math.floor((y * sh) / dh));
-    for (let x = 0; x < dw; x += 1) {
-      const sx = Math.min(sw - 1, Math.floor((x * sw) / dw));
-      const si = (sy * sw + sx) * 4;
-      const di = (y * dw + x) * 4;
-      out[di] = src[si];
-      out[di + 1] = src[si + 1];
-      out[di + 2] = src[si + 2];
-      out[di + 3] = src[si + 3];
-    }
-  }
-  return out;
-}
-
 /** Rota 90° antihorario (CSS rotate(-90deg)). */
 function rotateRgba90Ccw(
   src: Buffer,
@@ -118,39 +80,6 @@ function rotateRgba90Ccw(
     }
   }
   return { data: out, width: dw, height: dh };
-}
-
-/** CRC-16/XMODEM requerido por ZB64: init 0x0000. */
-export function crc16Ccitt(buf: Buffer): number {
-  let crc = 0x0000;
-  for (let i = 0; i < buf.length; i += 1) {
-    crc ^= buf[i] << 8;
-    for (let b = 0; b < 8; b += 1) {
-      if (crc & 0x8000) crc = ((crc << 1) ^ 0x1021) & 0xffff;
-      else crc = (crc << 1) & 0xffff;
-    }
-  }
-  return crc;
-}
-
-/** Bitmap → :Z64: (zlib + base64). ~10× más chico que hex. */
-export function encodeBitmapZ64(bitmap: Buffer): string {
-  const compressed = deflateSync(bitmap, { level: 9 });
-  const b64 = compressed.toString('base64');
-  const crc = crc16Ccitt(Buffer.from(b64, 'ascii')).toString(16).toUpperCase().padStart(4, '0');
-  return `:Z64:${b64}:${crc}`;
-}
-
-export type PrintMode = 'tear' | 'cutter';
-export type ThermalMethod = 'transfer' | 'direct';
-export type MediaType = 'gap' | 'continuous';
-
-export interface HardwareOptions {
-  printMode?: PrintMode;
-  thermalMethod?: ThermalMethod;
-  mediaType?: MediaType;
-  printSpeedIps?: number;
-  printDarkness?: number | null;
 }
 
 /**
@@ -208,14 +137,6 @@ function hardwareByStock(
   const role = roleFromPrinterName(printerName);
   if (role === 'PAPEL') return HARDWARE_BY_STOCK['conforme-papel'];
   return (stockSizeCode && HARDWARE_BY_STOCK[stockSizeCode]) || null;
-}
-
-export interface PngToZplResult {
-  zpl: string;
-  widthDots: number;
-  heightDots: number;
-  widthMm: number;
-  heightMm: number;
 }
 
 function pngBufferToZpl(
@@ -325,11 +246,20 @@ export interface GenerateLabelsZplOptions extends BuildLabelsHtmlOptions {
   mediaType?: MediaType;
   printSpeedIps?: number;
   printDarkness?: number;
+  /**
+   * Flag de prueba (fase 1 del ZPL nativo, ver docs/evaluacion-zpl-nativo.md).
+   * 'native' fuerza el generador ^A0/^BQ para las plantillas que ya lo
+   * soportan (bulto-estandar/colchon-v1/colchon-v2); el resto sigue por el
+   * path legacy en la misma tanda. Sin este flag el comportamiento es
+   * idéntico a antes — nadie lo usa por default todavía.
+   */
+  debugZplEngine?: 'native';
 }
 
 export interface GenerateLabelsZplResult {
   zpl: string;
   pages: number;
+  nativeLabelsCount: number;
   widthMm: number;
   heightMm: number;
   widthDots: number;
@@ -383,20 +313,24 @@ export async function generateLabelsZpl(
     : 6;
   const printSpeedIps = Number(options.printSpeedIps) || defaultSpeedIps;
 
-  const pdf = await generateLabelsPdf(labels, {
-    preview: options.preview,
-    labelIndex: options.labelIndex,
-    stockSizeCode: options.stockSizeCode,
-    printSizeOverride: options.printSizeOverride,
+  // Fase 1 ZPL nativo: partir la tanda en nativo (sin Puppeteer) + legacy
+  // (PDF→PNG→bitmap, como siempre), y volver a armar en el orden original.
+  // Sin el flag, nativeIndices queda vacío y el comportamiento es idéntico
+  // al de antes (todo por el path legacy, una sola llamada a Puppeteer).
+  const nativeIndices: number[] = [];
+  const legacyLabels: LabelData[] = [];
+  const legacyOriginalIndex: number[] = [];
+  labels.forEach((label, idx) => {
+    if (options.debugZplEngine === 'native' && supportsNativeZpl(label.templateCode)) {
+      nativeIndices.push(idx);
+    } else {
+      legacyLabels.push(label);
+      legacyOriginalIndex.push(idx);
+    }
   });
 
-  const pngs = await renderPdfToPngBuffers(pdf, dpi);
-  if (pngs.length === 0) {
-    throw new Error('No se pudo rasterizar el PDF de etiquetas');
-  }
-
-  const pages = pngs.map((png) =>
-    pngBufferToZpl(png, {
+  const nativeResults = nativeIndices.map((idx) =>
+    buildNativeLabelZpl(labels[idx], {
       dpi,
       copies,
       printMode,
@@ -406,6 +340,38 @@ export async function generateLabelsZpl(
       printDarkness: printDarknessResolved,
     }),
   );
+
+  let legacyPages: PngToZplResult[] = [];
+  if (legacyLabels.length > 0) {
+    const pdf = await generateLabelsPdf(legacyLabels, {
+      preview: options.preview,
+      labelIndex: options.labelIndex,
+      stockSizeCode: options.stockSizeCode,
+      printSizeOverride: options.printSizeOverride,
+    });
+
+    const pngs = await renderPdfToPngBuffers(pdf, dpi);
+    if (pngs.length === 0) {
+      throw new Error('No se pudo rasterizar el PDF de etiquetas');
+    }
+
+    legacyPages = pngs.map((png) =>
+      pngBufferToZpl(png, {
+        dpi,
+        copies,
+        printMode,
+        thermalMethod,
+        mediaType,
+        printSpeedIps,
+        printDarkness: printDarknessResolved,
+      }),
+    );
+  }
+
+  const bodyByIndex = new Map<number, PngToZplResult>();
+  nativeIndices.forEach((idx, i) => bodyByIndex.set(idx, nativeResults[i]));
+  legacyOriginalIndex.forEach((idx, i) => bodyByIndex.set(idx, legacyPages[i]));
+  const pages = labels.map((_, idx) => bodyByIndex.get(idx)!);
 
   const first = pages[0];
   const md =
@@ -429,6 +395,7 @@ export async function generateLabelsZpl(
   return {
     zpl: `${preamble}${pages.map((p) => p.zpl).join('')}`,
     pages: pages.length,
+    nativeLabelsCount: nativeIndices.length,
     widthMm: first.widthMm,
     heightMm: first.heightMm,
     widthDots: first.widthDots,
