@@ -17,7 +17,7 @@ router.post('/app/unlock', (req: Request, res: Response) => {
     res.status(401).json({ error: 'Clave incorrecta' });
     return;
   }
-  appAccessAuth.createSession(res);
+  appAccessAuth.createSession(req, res);
   res.json({ ok: true, unlocked: true });
 });
 

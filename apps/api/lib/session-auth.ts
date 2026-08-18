@@ -82,15 +82,20 @@ export function createSessionAuth({ cookieName, pinEnvVar, ttlMs, secretEnvVar }
     return ok;
   }
 
-  function createSession(res: Response): void {
+  function createSession(req: Request, res: Response): void {
     const expiresAt = Date.now() + ttlMs;
     const payload = String(expiresAt);
     const token = `${payload}.${sign(payload)}`;
     const value = encodeURIComponent(token);
     const maxAgeSeconds = Math.floor(ttlMs / 1000);
+    // Secure solo si la conexión es HTTPS de verdad — hoy es HTTP-LAN
+    // directo, así que no se manda (un browser descarta una cookie Secure
+    // sobre HTTP plano, rompería el login). Si algún día se agrega TLS,
+    // req.secure empieza a dar true solo y la cookie queda protegida sola.
+    const secureFlag = req.secure ? '; Secure' : '';
     res.setHeader(
       'Set-Cookie',
-      `${cookieName}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}`,
+      `${cookieName}=${value}; Path=/; HttpOnly; SameSite=Lax${secureFlag}; Max-Age=${maxAgeSeconds}`,
     );
   }
 

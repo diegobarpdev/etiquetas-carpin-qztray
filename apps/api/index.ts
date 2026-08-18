@@ -60,6 +60,15 @@ initPrintersConfig();
 async function main() {
   const app = express();
 
+  // El front (apps/web/server.ts) proxifica con xfwd:true (manda
+  // X-Forwarded-Proto real del browser); confiar en ese header solo cuando
+  // el que conecta es loopback (el propio proxy) — así req.secure refleja
+  // si el browser habló HTTPS con el front, aunque el salto interno
+  // front→API sea HTTP plano. Necesario para que la cookie de sesión
+  // (session-auth.ts) pueda poner Secure el día que se agregue TLS al
+  // front, sin que nadie que hable directo con la API pueda spoofearlo.
+  app.set('trust proxy', 'loopback');
+
   // Orígenes conocidos del front (nunca reflejar cualquier Origin: eso
   // permitía a cualquier página web leer respuestas de esta API con
   // credenciales incluidas).

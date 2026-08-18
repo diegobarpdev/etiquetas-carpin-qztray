@@ -18,8 +18,8 @@ export function verifyAdminPin(pin: unknown, clientIp: string): boolean {
   return auth.verifyPin(pin, clientIp);
 }
 
-export function createAdminSession(res: Response): void {
-  auth.createSession(res);
+export function createAdminSession(req: Request, res: Response): void {
+  auth.createSession(req, res);
 }
 
 export function clearAdminSession(req: Request, res: Response): void {

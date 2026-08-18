@@ -77,7 +77,7 @@ router.post('/admin/printers/unlock', (req: Request, res: Response) => {
     res.status(401).json({ error: 'Clave incorrecta' });
     return;
   }
-  createAdminSession(res);
+  createAdminSession(req, res);
   res.json({ ok: true, unlocked: true });
 });
 
