@@ -44,11 +44,35 @@ async function renderPdfToPngBuffers(pdf: Buffer, dpi: number): Promise<Buffer[]
   return pages;
 }
 
-function mmToDots(mm: number, dpi: number): number {
+export function mmToDots(mm: number, dpi: number): number {
   return Math.max(1, Math.round((Number(mm) / 25.4) * dpi));
 }
 
-function scaleRgbaNearest(
+/** Líneas ^MM/^MT/^MN/^PR/^MD comunes a cualquier bloque ^XA...^XZ (bitmap o nativo). */
+export function buildHardwareLines(options: {
+  printMode?: PrintMode;
+  thermalMethod?: ThermalMethod;
+  mediaType?: MediaType;
+  printSpeedIps?: number;
+  printDarkness?: number | null;
+}): string[] {
+  const hardware: string[] = [];
+  if (options.printMode) hardware.push(options.printMode === 'cutter' ? '^MMC' : '^MMT');
+  if (options.thermalMethod) hardware.push(options.thermalMethod === 'direct' ? '^MTD' : '^MTT');
+  if (options.mediaType) hardware.push(options.mediaType === 'continuous' ? '^MNN' : '^MNY');
+  const speed = Number(options.printSpeedIps);
+  if (Number.isFinite(speed) && speed >= 2) {
+    hardware.push(`^PR${Math.max(2, Math.min(14, Math.round(speed)))}`);
+  }
+  const md = Number(options.printDarkness);
+  if (Number.isFinite(md)) {
+    hardware.push(`^MD${Math.max(-30, Math.min(30, Math.round(md)))}`);
+  }
+  hardware.push('^JUS');
+  return hardware;
+}
+
+export function scaleRgbaNearest(
   src: Buffer,
   sw: number,
   sh: number,
@@ -97,7 +121,7 @@ function rotateRgba90Ccw(
 }
 
 /** CRC-16/XMODEM requerido por ZB64: init 0x0000. */
-function crc16Ccitt(buf: Buffer): number {
+export function crc16Ccitt(buf: Buffer): number {
   let crc = 0x0000;
   for (let i = 0; i < buf.length; i += 1) {
     crc ^= buf[i] << 8;
@@ -110,7 +134,7 @@ function crc16Ccitt(buf: Buffer): number {
 }
 
 /** Bitmap → :Z64: (zlib + base64). ~10× más chico que hex. */
-function encodeBitmapZ64(bitmap: Buffer): string {
+export function encodeBitmapZ64(bitmap: Buffer): string {
   const compressed = deflateSync(bitmap, { level: 9 });
   const b64 = compressed.toString('base64');
   const crc = crc16Ccitt(Buffer.from(b64, 'ascii')).toString(16).toUpperCase().padStart(4, '0');
@@ -186,7 +210,7 @@ function hardwareByStock(
   return (stockSizeCode && HARDWARE_BY_STOCK[stockSizeCode]) || null;
 }
 
-interface PngToZplResult {
+export interface PngToZplResult {
   zpl: string;
   widthDots: number;
   heightDots: number;
@@ -270,19 +294,7 @@ function pngBufferToZpl(
       ? Math.round(heightMm * 100) / 100
       : Math.round((targetH / dpi) * 25.4 * 100) / 100;
 
-  const hardware: string[] = [];
-  if (options.printMode) hardware.push(options.printMode === 'cutter' ? '^MMC' : '^MMT');
-  if (options.thermalMethod) hardware.push(options.thermalMethod === 'direct' ? '^MTD' : '^MTT');
-  if (options.mediaType) hardware.push(options.mediaType === 'continuous' ? '^MNN' : '^MNY');
-  const speed = Number(options.printSpeedIps);
-  if (Number.isFinite(speed) && speed >= 2) {
-    hardware.push(`^PR${Math.max(2, Math.min(14, Math.round(speed)))}`);
-  }
-  const md = Number(options.printDarkness);
-  if (Number.isFinite(md)) {
-    hardware.push(`^MD${Math.max(-30, Math.min(30, Math.round(md)))}`);
-  }
-  hardware.push('^JUS');
+  const hardware = buildHardwareLines(options);
 
   const zpl = [
     '^XA',
